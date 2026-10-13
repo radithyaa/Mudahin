@@ -1,0 +1,23 @@
+{
+  "name": "@mudahin/infra",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "dev": "alchemy dev",
+    "deploy": "alchemy deploy",
+    "destroy": "alchemy destroy"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/platform-bun": "4.0.3",
+    "@effect/platform-node": "4.0.3",
+    "@mudahin/config": "workspace:*",
+    "alchemy": "2.0.0-beta.81",
+    "effect": "4.0.3",
+    "typescript": "catalog:",
+    "varlock": "catalog:"
+  }
+}

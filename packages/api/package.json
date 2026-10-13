@@ -1,0 +1,22 @@
+{
+  "name": "@mudahin/api",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mudahin/auth": "workspace:*",
+    "@mudahin/db": "workspace:*",
+    "@trpc/client": "catalog:",
+    "@trpc/server": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@mudahin/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

@@ -1,0 +1,3 @@
+{
+  "extends": "@mudahin/config/tsconfig.base.json"
+}
