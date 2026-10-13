@@ -4,6 +4,16 @@ import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import "varlock/auto-load";
 
+/**
+ * Secret opsional: ambil dari env bila ada, jika tidak pakai string kosong.
+ *
+ * Kenapa tidak wajib: stack harus tetap bisa dijalankan untuk pengembangan UI
+ * tanpa kunci AI. Bila `DEEPSEEK_API_KEY` kosong, prosedur tRPC AI akan gagal
+ * dengan pesan yang ramah dan UI menampilkan banner fallback (SRS §4.5).
+ */
+const optionalString = (name: string, fallback = "") =>
+  Config.String(name).pipe(Config.withDefault(fallback));
+
 export const db = Cloudflare.D1.Database("database", {
   migrations: "../../packages/db/src/migrations",
 });
@@ -18,6 +28,13 @@ export const server = Cloudflare.Worker("server", {
     CORS_ORIGIN: Config.String("CORS_ORIGIN"),
     BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
     BETTER_AUTH_URL: Cloudflare.Worker.URL,
+    DEEPSEEK_API_KEY: optionalString("DEEPSEEK_API_KEY"),
+    DEEPSEEK_BASE_URL: optionalString(
+      "DEEPSEEK_BASE_URL",
+      "https://api.deepseek.com"
+    ),
+    DEEPSEEK_MODEL: optionalString("DEEPSEEK_MODEL", "deepseek-chat"),
+    PREWARM_TOKEN: optionalString("PREWARM_TOKEN"),
   },
   dev: {
     port: 3000,
@@ -52,5 +69,5 @@ export default Alchemy.Stack(
       web: webWorker.url,
       server: serverWorker.url,
     };
-  }),
+  })
 );

@@ -2,6 +2,10 @@
 
 This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
 
+## Frontend Architecture
+
+Frontend (`apps/web`) uses a **vertical slice architecture**: each feature lives in its own `src/routes/<feature>/` folder containing its own components, hooks, and lib. Read [`apps/web/ARCHITECTURE.md`](apps/web/ARCHITECTURE.md) before adding pages or features.
+
 ## Quick Reference
 
 - **Format code**: `bunx ultracite fix`

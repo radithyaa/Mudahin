@@ -6,73 +6,105 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Palet merek Mudahin — SERBA SATU TEMPAT.
+ * Ubah nilai di bawah untuk mengganti tema warna seluruh aplikasi.
+ * Format: oklch(Lightness Chroma Hue). Contoh hue: 250 = biru, 160 = hijau, 300 = ungu.
+ */
 :root {
+  --brand-hue: 258;
+  --brand-chroma: 0.19;
+
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --primary: oklch(0.52 var(--brand-chroma) var(--brand-hue));
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.96 0.01 var(--brand-hue));
+  --secondary-foreground: oklch(0.3 0.05 var(--brand-hue));
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.58 0.22 27);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --radius: 0.625rem;
+  --muted-foreground: oklch(0.44 0 0);
+  --accent: oklch(0.95 0.03 var(--brand-hue));
+  --accent-foreground: oklch(0.3 0.06 var(--brand-hue));
+  --destructive: oklch(0.52 0.22 27);
+  --border: oklch(0.9 0 0);
+  --input: oklch(0.9 0 0);
+  --ring: oklch(0.52 var(--brand-chroma) var(--brand-hue));
+  --chart-1: oklch(0.62 0.19 var(--brand-hue));
+  --chart-2: oklch(0.7 0.16 calc(var(--brand-hue) + 40));
+  --chart-3: oklch(0.6 0.18 calc(var(--brand-hue) - 40));
+  --chart-4: oklch(0.75 0.15 calc(var(--brand-hue) + 80));
+  --chart-5: oklch(0.55 0.2 calc(var(--brand-hue) - 80));
+  --radius: 0.75rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary: oklch(0.52 var(--brand-chroma) var(--brand-hue));
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-accent: oklch(0.95 0.03 var(--brand-hue));
+  --sidebar-accent-foreground: oklch(0.3 0.06 var(--brand-hue));
+  --sidebar-border: oklch(0.9 0 0);
+  --sidebar-ring: oklch(0.52 var(--brand-chroma) var(--brand-hue));
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  --background: oklch(0.145 0.01 var(--brand-hue));
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
+  --card: oklch(0.205 0.015 var(--brand-hue));
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
+  --popover: oklch(0.205 0.015 var(--brand-hue));
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.87 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
+  --primary: oklch(0.72 0.16 var(--brand-hue));
+  --primary-foreground: oklch(0.15 0.03 var(--brand-hue));
+  --secondary: oklch(0.28 0.03 var(--brand-hue));
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.371 0 0);
+  --muted: oklch(0.269 0.02 var(--brand-hue));
+  --muted-foreground: oklch(0.75 0 0);
+  --accent: oklch(0.34 0.05 var(--brand-hue));
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --sidebar: oklch(0.205 0 0);
+  --destructive: oklch(0.7 0.19 22);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 18%);
+  --ring: oklch(0.72 0.16 var(--brand-hue));
+  --chart-1: oklch(0.72 0.16 var(--brand-hue));
+  --chart-2: oklch(0.78 0.14 calc(var(--brand-hue) + 40));
+  --chart-3: oklch(0.68 0.16 calc(var(--brand-hue) - 40));
+  --chart-4: oklch(0.8 0.13 calc(var(--brand-hue) + 80));
+  --chart-5: oklch(0.64 0.18 calc(var(--brand-hue) - 80));
+  --sidebar: oklch(0.205 0.015 var(--brand-hue));
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-primary: oklch(0.72 0.16 var(--brand-hue));
+  --sidebar-primary-foreground: oklch(0.15 0.03 var(--brand-hue));
+  --sidebar-accent: oklch(0.34 0.05 var(--brand-hue));
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.72 0.16 var(--brand-hue));
+}
+
+/*
+ * Varian kontras tinggi — diterapkan lewat class `.high-contrast`
+ * yang di-set oleh AccessibilityApplier berdasarkan Focus Profile.
+ */
+.high-contrast {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0 0 0);
+  --card: oklch(1 0 0);
+  --muted-foreground: oklch(0.2 0 0);
+  --border: oklch(0 0 0);
+  --input: oklch(0 0 0);
+  --primary: oklch(0.42 0.22 var(--brand-hue));
+  --ring: oklch(0 0 0);
+}
+
+.high-contrast.dark {
+  --background: oklch(0 0 0);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.12 0 0);
+  --muted-foreground: oklch(0.9 0 0);
+  --border: oklch(1 0 0);
+  --input: oklch(1 0 0);
 }
 
 @theme inline {
@@ -121,10 +153,50 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply font-sans bg-background text-foreground;
-  }
+
   html {
     @apply font-sans;
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    overscroll-behavior-y: none;
+    font-size: calc(1rem * var(--a11y-font-scale, 1));
+    line-height: var(--a11y-line-height, 1.6);
+    letter-spacing: var(--a11y-letter-spacing, 0);
+    @apply font-sans bg-background text-foreground;
+  }
+
+  /* Hindari zoom otomatis iOS pada input ber-font kecil (tetap hormati skala a11y). */
+  input,
+  select,
+  textarea {
+    font-size: max(16px, calc(1rem * var(--a11y-font-scale, 1)));
+  }
+
+  :root[data-font="dyslexic"] body {
+    font-family: "OpenDyslexic", "Comic Sans MS", var(--font-sans), sans-serif;
+    word-spacing: 0.1em;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  .reduce-motion *,
+  .reduce-motion *::before,
+  .reduce-motion *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

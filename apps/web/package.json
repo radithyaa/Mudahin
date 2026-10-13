@@ -5,15 +5,15 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "check-types": "vite build && tsc --noEmit",
+    "desktop:build": "tauri build",
+    "desktop:dev": "tauri dev",
+    "dev:bare": "vite dev",
+    "env:generate": "varlock codegen",
+    "generate-pwa-assets": "pwa-assets-generator",
     "serve": "vite preview",
     "start": "vite",
-    "check-types": "vite build && tsc --noEmit",
-    "generate-pwa-assets": "pwa-assets-generator",
-    "tauri": "tauri",
-    "desktop:dev": "tauri dev",
-    "desktop:build": "tauri build",
-    "dev:bare": "vite dev",
-    "env:generate": "varlock codegen"
+    "tauri": "tauri"
   },
   "dependencies": {
     "@mudahin/api": "workspace:*",
@@ -26,6 +26,7 @@
     "@trpc/server": "catalog:",
     "@trpc/tanstack-react-query": "^11.18.0",
     "better-auth": "catalog:",
+    "gsap": "^3.15.0",
     "lucide-react": "catalog:",
     "next-themes": "catalog:",
     "react": "catalog:",
@@ -33,7 +34,8 @@
     "sonner": "catalog:",
     "varlock": "catalog:",
     "vite-plugin-pwa": "^2.0.0",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@mudahin/config": "workspace:*",

@@ -1,136 +1,196 @@
-# mudahin
+# Mudahin
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Router, Hono, TRPC, and more.
+**Platform pembelajaran inklusif & adaptif untuk siswa dengan kebutuhan khusus.**
 
-## Features
+Mudahin menyesuaikan cara materi dan kuis disajikan sesuai kebutuhan aksesibilitas tiap siswa — disleksia, ADHD, penglihatan rendah, dan kendala bahasa. Bukan sekadar "teks diperbesar": setiap bagian aplikasi (tipografi, pemandu baca, suara, bahasa materi, format kuis) beradaptasi pada satu **Focus Profile**.
 
-- **TypeScript** - For type safety and improved developer experience
-- **TanStack Router** - File-based routing with full type safety
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **Hono** - Lightweight, performant server framework
-- **tRPC** - End-to-end type-safe APIs
-- **workers** - Runtime environment
-- **Drizzle** - TypeScript-first ORM
-- **Cloudflare D1** - Database engine
-- **Authentication** - Better-Auth
-- **PWA** - Progressive Web App support
-- **Tauri** - Build native desktop applications
-- **Turborepo** - Optimized monorepo build system
+> Hackathon JOINTS 2026 · Tema *Education* · Subtema *Siswa penyandang disabilitas / berkendala bahasa* · Target **WCAG 2.1 Level AA**.
 
-## Getting Started
+---
 
-First, install the dependencies:
+## ✨ Fitur Inti
 
-```bash
-bun install
-```
+| Fitur | Ringkasan |
+|---|---|
+| **Onboarding & Profil Aksesibilitas** | Pilih kebutuhan (multi-pilih); preset tipografi diterapkan otomatis. |
+| **Beranda** | Pintu masuk ke pustaka + tombol akses cepat (teks besar, pemandu baris, kontras tinggi). |
+| **Pustaka Materi** | 6 materi contoh siap demo, filter per mata pelajaran. |
+| **Focus Reader** | Tipografi adaptif, pengaturan jarak baris/huruf/font disleksia. |
+| **Reading Ruler** | Pemandu baris yang mengikuti bacaan, bisa digeser dengan jari. |
+| **Read-Aloud (TTS)** | Membacakan materi dengan penanda kata aktif; kecepatan 0.5–2×. |
+| **AI Text Simplifier** | Menyederhanakan materi jadi poin-poin via DeepSeek, dapat dibacakan juga. |
+| **Kuis Adaptif** | Soal dibuat dari materi; pada profil tertentu soal dapat dibacakan. |
+| **Hasil Kuis** | Skor, pembahasan jawaban salah, dan opsi mengulang bagian yang salah. |
+| **Pengaturan Aksesibilitas** | Semua toggle preferensi dalam satu halaman. |
+| **Profil & Progres** | Ringkasan kebutuhan, penyesuaian aktif, dan ketuntasan pustaka. |
 
-## Database Setup
+**Status:** seluruh fitur di atas adalah **Core (P0)** dan berjalan end-to-end. Daftar fitur lanjutan ada di [Future Work](#-future-work).
 
-This project uses Cloudflare D1 (SQLite) with Drizzle ORM.
+---
 
-Runtime database access uses the Cloudflare `DB` binding from `packages/infra/alchemy.run.ts`. If a local `DATABASE_URL` is present, it is only for database tooling.
+## 🚀 Menjalankan Proyek
 
-Alchemy provisions the D1 database and applies migrations during `deploy`.
-
-1. Generate migration files:
+**Prasyarat:** [Bun 1.3+](https://bun.sh). Jangan pakai npm/yarn/pnpm (lockfile resmi: `bun.lock`).
 
 ```bash
-bun run db:generate
+bun install          # pasang dependency semua workspace
 ```
 
-Then, run the development server:
+Isi nilai rahasia (mis. `DEEPSEEK_API_KEY`) di `.env` sesuai [Konfigurasi](#-konfigurasi) sebelum menjalankan fitur AI.
 
 ```bash
-bun run dev
+bun run dev:stack    # jalankan web + server lokal (Cloudflare bindings via Alchemy)
 ```
 
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
-The API is running at [http://localhost:3000](http://localhost:3000).
+Ini menjalankan Worker server **beserta binding D1 dan secret**-nya secara lokal, lalu menautkan web ke server tersebut. Buka:
 
-## UI Customization
+- Web — <http://localhost:3001>
+- API — <http://localhost:3000>
 
-React web apps in this stack share shadcn/ui primitives through `packages/ui`.
+Hanya ingin mengerjakan frontend (tanpa D1/AI lokal)? Pakai `bun run dev:web`.
 
-- Change design tokens and global styles in `packages/ui/src/styles/globals.css`
-- Update shared primitives in `packages/ui/src/components/*`
-- Adjust shadcn aliases or style config in `packages/ui/components.json` and `apps/web/components.json`
+Untuk demo di HP, buka `http://<IP-komputer>:3001` dari jaringan yang sama (aplikasi ini mobile-first dan dapat dipasang sebagai PWA).
 
-### Add more shared components
+### Perintah Penting
 
-Run this from the project root to add more primitives to the shared UI package:
+| Perintah | Fungsi |
+|---|---|
+| `bun run dev:stack` | Web + server lokal sekaligus (via Alchemy, dengan bindings) |
+| `bun run dev:web` | Frontend saja (Vite, port 3001) |
+| `bun run build` | Build semua aplikasi |
+| `bun run check-types` | Cek tipe seluruh workspace |
+| `bun run check` / `bun run fix` | Lint & format (Ultracite/Biome) |
+| `bun run db:generate` | Generate migrasi Drizzle |
+| `bun run env:generate` | Regenerate `src/env.ts` dari skema Varlock |
+| `bun run prewarm` | Panaskan cache AI untuk semua materi demo |
+| `bun run deploy` / `bun run destroy` | Deploy/hapus infrastruktur Cloudflare (Alchemy) |
 
-```bash
-npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
+---
+
+## 🧭 Alur Demo (5 Detik)
+
+> **Buka → Pustaka → pilih materi → Sederhanakan → Bacakan → Kuis → Hasil.**
+
+1. **Onboarding** — pilih kebutuhan (mis. *Disleksia* + *Penglihatan Rendah*). Tampilan langsung menyesuaikan.
+2. **Beranda** — tekan **Mulai Belajar**.
+3. **Pustaka** — pilih salah satu materi.
+4. **Focus Reader** — aktifkan *Pemandu* dan *Bacakan*; kata yang dibaca disorot.
+5. **Sederhanakan** — AI mengubah materi menjadi poin-poin sederhana.
+6. **Mulai Kuis** — jawab soal, lalu lihat **Hasil** beserta pembahasan.
+
+**Protokol sebelum pitch:** jalankan `bun run prewarm` agar hasil AI tersimpan di cache, lalu uji aplikasi dalam mode luring. Materi tetap tersedia dari salinan lokal saat jaringan mati.
+
+---
+
+## 🏗️ Arsitektur
+
+Monorepo **Turborepo + Bun workspaces** dengan pemisahan tegas antara *apps* (deployable) dan *packages* (library internal).
+
+```mermaid
+flowchart TD
+    Web["apps/web<br/>React 19 · Vite · TanStack Router<br/>Tailwind v4 · shadcn · PWA"]
+    Server["apps/server<br/>Hono · tRPC · Better-Auth<br/>Cloudflare Workers"]
+    Api["packages/api<br/>Router tRPC + Zod + prompt"]
+    Db["packages/db<br/>Drizzle + D1"]
+    UI["packages/ui<br/>Komponen & token a11y"]
+    DeepSeek["DeepSeek API<br/>deepseek-chat"]
+
+    Web -->|tRPC end-to-end type-safe| Server
+    Server --> Api
+    Api --> Db
+    Api --> DeepSeek
+    Web --> UI
 ```
 
-Import shared components like this:
+| Lapisan | Teknologi |
+|---|---|
+| Monorepo | Turborepo + Bun workspaces |
+| Frontend | React 19, Vite, TanStack Router, TanStack Query, Zustand, Tailwind v4, shadcn/ui |
+| Backend | Hono + tRPC di Cloudflare Workers (deploy via Alchemy) |
+| Database | Cloudflare D1 (SQLite) + Drizzle ORM |
+| AI | DeepSeek `deepseek-chat` (server-side, timeout 8s, cache di D1) |
+| TTS | Web Speech API (di sisi klien) |
+| PWA | `vite-plugin-pwa` — dapat dipasang & luring |
 
-```tsx
-import { Button } from "@mudahin/ui/components/button";
-```
-
-### Add app-specific blocks
-
-If you want to add app-specific blocks instead of shared primitives, run the shadcn CLI from `apps/web`.
-
-## Environment Configuration
-
-Each app owns its environment schema in `.env.schema`. Varlock generates `src/env.ts` during installation; run `bun run env:generate` after changing a schema. Commit schemas, and keep secrets in ignored env files or your deployment platform.
-
-Import the generated `ENV` accessor in application code. Shared database and auth packages receive configuration or initialized clients from the application. See [Varlock's monorepo guide](https://varlock.dev/guides/monorepos/).
-
-For Cloudflare, Alchemy loads and validates deployment inputs with `varlock/auto-load` in its Node/Bun deployment process. Worker code reads native bindings; web clients use the framework's public env API through `src/env.public.ts` where needed. Alchemy supplies resource URLs and managed database credentials. In-Worker Varlock protections are deferred until an official Alchemy integration is available; see [the non-Wrangler deployment guidance](https://varlock.dev/integrations/cloudflare/#non-wrangler-deploy-tools-alchemy-sst-pulumi).
-
-Bun's automatic env loading is disabled in `bunfig.toml`; the framework integration or server bootstrap loads Varlock. Node deployments must include Varlock and its dependencies alongside the app schema.
-
-Run standalone Node/Bun tools that use Varlock from the owning app directory so they load that app's schema and env files. `env:generate` only generates TypeScript files; it does not initialize environment values in a subsequent command.
-
-## Deployment
-
-### Alchemy
-
-- Target: web on Cloudflare + server on Cloudflare
-- Configure provider accounts: `cd packages/infra && bunx alchemy profile edit`
-- Dev: bun run dev
-- Deploy: bun run deploy
-- Destroy: bun run destroy
-
-`alchemy profile edit` stores the selected Axiom, Cloudflare, Neon, PlanetScale, and/or Prisma provider profiles under `~/.alchemy`; no provider-specific setup command is required by this scaffold.
-
-Deploys are staged and default to a personal `dev_<username>` stage. For production, run the deploy with an explicit stage from `packages/infra`:
-
-```bash
-cd packages/infra && bunx alchemy deploy --stage production
-```
-
-### Production origins
-
-- Required after the first deploy: set `CORS_ORIGIN` in `apps/server/.env` to the exact deployed web origin, such as `https://app.example.com`, then deploy the server again.
-
-## Project Structure
+### Struktur Folder
 
 ```
 mudahin/
 ├── apps/
-│   ├── web/         # Frontend application (React + TanStack Router)
-│   └── server/      # Backend API (Hono, TRPC)
+│   ├── web/         # Frontend (vertical-slice per route — lihat apps/web/ARCHITECTURE.md)
+│   └── server/      # Hono + tRPC (Cloudflare Worker)
 ├── packages/
-│   ├── ui/          # Shared shadcn/ui components and styles
-│   ├── api/         # API layer / business logic
-│   ├── auth/        # Authentication configuration & logic
-│   └── db/          # Database schema & queries
+│   ├── api/         # Kontrak & logika: router tRPC, skema Zod, prompt, cache AI
+│   ├── auth/        # Konfigurasi Better-Auth
+│   ├── db/          # Skema Drizzle + migrasi
+│   ├── ui/          # Komponen shadcn & token aksesibilitas lintas-app
+│   ├── config/      # tsconfig & preset lint bersama
+│   └── infra/       # Definisi infrastruktur Alchemy (Worker + D1 + Website)
+├── scripts/         # Utilitas (prewarm, verifikasi)
+└── turbo.json
 ```
 
-## Available Scripts
+Detail arsitektur frontend (vertical slice) ada di [`apps/web/ARCHITECTURE.md`](apps/web/ARCHITECTURE.md); aturan teknis lengkap ada di [`ATURAN-TEKNIS.md`](../ATURAN-TEKNIS.md).
 
-- `bun run dev`: Start all applications in development mode
-- `bun run build`: Build all applications
-- `bun run dev:web`: Start only the web application
-- `bun run dev:server`: Start only the server
-- `bun run check-types`: Check TypeScript types across all apps
-- `bun run db:generate`: Generate database client/types
-- `cd apps/web && bun run generate-pwa-assets`: Generate PWA assets
-- `cd apps/web && bun run desktop:dev`: Start Tauri desktop app in development
-- `cd apps/web && bun run desktop:build`: Build Tauri desktop app
+---
+
+## ♿ Aksesibilitas
+
+Dibangun mengacu pada **WCAG 2.1 AA**:
+
+- Rasio kontras teks minimum **4.5:1** (tersedia mode kontras tinggi).
+- Target sentuh minimum **44×44 px**; aplikasi mobile-first & *gesture friendly* (bottom sheet, tab bar bawah, area aman perangkat).
+- Setiap kontrol punya **ARIA label** dan dapat diakses keyboard; ikon aksi utama selalu disertai label teks.
+- Ukuran teks mulai 16px dan dapat diperbesar hingga **200%** tanpa merusak layout.
+- Informasi tidak pernah disampaikan hanya lewat warna.
+- Animasi (GSAP) menghormati `prefers-reduced-motion` **dan** preferensi "Kurangi animasi" di aplikasi.
+- Font **OpenDyslexic** tersedia untuk profil disleksia.
+
+---
+
+## 🔌 Konfigurasi
+
+Konfigurasi environment memakai **Varlock**: hanya file `*.env.schema` yang di-commit (tanpa nilai rahasia).
+
+| File skema | Variabel |
+|---|---|
+| `apps/web/.env.schema` | `NODE_ENV`, `VITE_SERVER_URL` |
+| `apps/server/.env.schema` | `NODE_ENV`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CORS_ORIGIN` |
+| `packages/infra/.env.schema` | Impor server + `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`, `DEEPSEEK_MODEL`, `PREWARM_TOKEN`, `ALCHEMY_PASSWORD` |
+
+Salin skema ke `.env` lokal (mis. `packages/infra/.env`) dan isi nilai rahasianya. Alchemy memuat dan memvalidasi nilai ini saat `bun run dev:stack` / `bun run deploy`, lalu menyuntikkannya ke Worker sebagai binding. File `.env` **gitignored** — jangan pernah commit secret, dan jangan memakai prefix `VITE_` untuk key rahasia (variabel `VITE_*` ikut ter-bundle ke client).
+
+---
+
+## 🛡️ Ketahanan Demo
+
+- **Timeout 8 detik** + 1 retry untuk setiap panggilan DeepSeek; kegagalan menampilkan banner fallback (layar tidak pernah kosong).
+- **Cache hasil AI di D1** dengan key = hash `(endpoint + versi prompt + input)` → respons identik tidak memanggil API ulang.
+- **Salinan materi lokal** sebagai fallback luring.
+- Semua respons AI **divalidasi Zod** sebelum dikirim ke client.
+
+---
+
+## 🤖 Pencantuman AI
+
+Sesuai Rules Lomba, peran AI dalam proyek ini:
+
+| Tahap | AI / Tools | Peran |
+|---|---|---|
+| Riset & penulisan SRS | LLM asisten | Penyusunan dokumen & pemetaan kebutuhan |
+| Pengembangan kode | AI coding assistant | Scaffolding monorepo, komponen UI, integrasi tRPC/Drizzle |
+| **Fitur produk** | **DeepSeek `deepseek-chat`** | Penyederhanaan teks, generasi kuis |
+| **Fitur produk** | **Web Speech API** (bukan AI generatif) | TTS di sisi klien |
+| Desain UI/UX | AI design assistant | Eksplorasi layout & sistem warna ramah aksesibilitas |
+
+---
+
+## 🌱 Future Work
+
+Fitur berikut **belum dikerjakan** dan hanya ada di roadmap proposal (SRS Bagian 8): avatar isyarat **BISINDO 3D**, **AI Dialect Adapter** bahasa daerah, **OCR tulisan tangan** → flashcard, **Teacher & Parent Dashboard**, haptic feedback engine, sinkronisasi profil lintas perangkat, dan evaluasi khusus siswa tunarungu.
+
+---
+
+## 📄 Lisensi
+
+Karya orisinal untuk Hackathon JOINTS 2026.

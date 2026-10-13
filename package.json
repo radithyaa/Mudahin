@@ -1,6 +1,7 @@
 {
   "name": "mudahin",
   "private": true,
+  "type": "module",
   "workspaces": {
     "packages": [
       "apps/*",
@@ -26,20 +27,20 @@
       "drizzle-orm": "1.0.0-rc.4"
     }
   },
-  "type": "module",
   "scripts": {
-    "dev": "turbo run dev",
     "build": "turbo run build",
+    "check": "ultracite check",
     "check-types": "turbo run check-types",
-    "dev:web": "turbo run dev:bare -F web --",
-    "dev:server": "turbo run dev:bare -F hono --",
     "db:generate": "turbo run db:generate -F @mudahin/db --",
     "deploy": "turbo run deploy -F @mudahin/infra --",
     "destroy": "turbo run destroy -F @mudahin/infra --",
+    "dev": "turbo run dev",
+    "dev:stack": "turbo run dev -F @mudahin/infra --",
+    "dev:web": "turbo run dev:bare -F web --",
+    "prewarm": "bun run scripts/prewarm.ts",
     "env:generate": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
-    "postinstall": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
-    "check": "ultracite check",
-    "fix": "ultracite fix"
+    "fix": "ultracite fix",
+    "postinstall": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/"
   },
   "dependencies": {
     "zod": "catalog:"

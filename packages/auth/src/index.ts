@@ -12,7 +12,7 @@ export type AuthConfig = {
 export function createAuth(
   env: AuthConfig,
   database: Database,
-  desktopOrigins: readonly string[] = [],
+  desktopOrigins: readonly string[] = []
 ) {
   return betterAuth({
     database: drizzleAdapter(database, {

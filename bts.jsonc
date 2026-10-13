@@ -24,5 +24,5 @@
   "dbSetup": "d1",
   "api": "trpc",
   "webDeploy": "cloudflare",
-  "serverDeploy": "cloudflare",
+  "serverDeploy": "cloudflare"
 }

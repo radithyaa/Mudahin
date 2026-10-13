@@ -7,6 +7,16 @@ import { toast } from "sonner";
 import { ENV } from "../env.public";
 
 export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Query materi jarang berubah; hindari spam saat jaringan buruk.
+      retry: 1,
+    },
+    mutations: {
+      // Panggilan AI sudah punya retry internal (1×) + cache; jangan ulangi lagi.
+      retry: 0,
+    },
+  },
   queryCache: new QueryCache({
     onError: (error, query) => {
       toast.error(error.message, {
@@ -25,12 +35,8 @@ export const trpcClient = createTRPCClient<AppRouter>({
   links: [
     httpBatchLink({
       url: `${ENV.VITE_SERVER_URL.replace(/\/$/, "")}/trpc`,
-      fetch(url, options) {
-        return fetch(url, {
-          ...options,
-          credentials: "include",
-        });
-      },
+      fetch: (url, options) =>
+        globalThis.fetch(url, { ...options, credentials: "include" }),
     }),
   ],
 });
