@@ -19,12 +19,15 @@ Mudahin menyesuaikan cara materi dan kuis disajikan sesuai kebutuhan aksesibilit
 | **Reading Ruler** | Pemandu baris yang mengikuti bacaan, bisa digeser dengan jari. |
 | **Read-Aloud (TTS)** | Membacakan materi dengan penanda kata aktif; kecepatan 0.5–2×. |
 | **AI Text Simplifier** | Menyederhanakan materi jadi poin-poin via DeepSeek, dapat dibacakan juga. |
+| **Kartu Belajar (Flashcard)** | Dek kartu tanya-jawab otomatis dari materi; dibalik dengan ketukan, bisa dibacakan. |
+| **Mode Fokus** | Menampilkan satu blok teks pada satu waktu dengan tipografi besar untuk menjaga fokus. |
 | **Kuis Adaptif** | Soal dibuat dari materi; pada profil tertentu soal dapat dibacakan. |
 | **Hasil Kuis** | Skor, pembahasan jawaban salah, dan opsi mengulang bagian yang salah. |
-| **Pengaturan Aksesibilitas** | Semua toggle preferensi dalam satu halaman. |
-| **Profil & Progres** | Ringkasan kebutuhan, penyesuaian aktif, dan ketuntasan pustaka. |
+| **Pengaturan Aksesibilitas** | Semua toggle preferensi dalam satu halaman (termasuk getar/haptic). |
+| **Profil & Progres** | Ringkasan kebutuhan, penyesuaian aktif, dan ketuntasan pustaka (tersimpan lokal + D1). |
+| **Cadangan Profil** | Simpan/pulihkan preferensi lintas perangkat lewat "kode cadangan" (tanpa akun). |
 
-**Status:** seluruh fitur di atas adalah **Core (P0)** dan berjalan end-to-end. Daftar fitur lanjutan ada di [Future Work](#-future-work).
+**Status:** seluruh fitur di atas adalah **Core (P0)** dan berjalan end-to-end, ditambah fitur **Should-Have** (kartu belajar, mode fokus, mode luring, STT, mind map, animasi) dan sebagian **Future Work** yang dikerjakan karena waktu tersisa (getar/haptic, cadangan profil lintas perangkat). Daftar fitur lanjutan ada di [Future Work](#-future-work).
 
 ---
 
@@ -74,11 +77,13 @@ Untuk demo di HP, buka `http://<IP-komputer>:3001` dari jaringan yang sama (apli
 1. **Onboarding** — pilih kebutuhan (mis. *Disleksia* + *Penglihatan Rendah*). Tampilan langsung menyesuaikan.
 2. **Beranda** — tekan **Mulai Belajar**.
 3. **Pustaka** — pilih salah satu materi.
-4. **Focus Reader** — aktifkan *Pemandu* dan *Bacakan*; kata yang dibaca disorot.
-5. **Sederhanakan** — AI mengubah materi menjadi poin-poin sederhana.
-6. **Mulai Kuis** — jawab soal, lalu lihat **Hasil** beserta pembahasan.
+4. **Focus Reader** — aktifkan *Pemandu* dan *Bacakan*; kata yang dibaca disorot. Tekan *Fokus* untuk membaca satu blok demi satu blok.
+5. **Sederhanakan** — AI mengubah materi menjadi poin-poin sederhana (atau peta pikiran).
+6. **Kartu Belajar / Mulai Kuis** — hafalkan istilah lewat kartu, atau jawab soal lalu lihat **Hasil** beserta pembahasan.
 
-**Protokol sebelum pitch:** jalankan `bun run prewarm` agar hasil AI tersimpan di cache, lalu uji aplikasi dalam mode luring. Materi tetap tersedia dari salinan lokal saat jaringan mati.
+Dalam ringkasan AI: pilih **Peta Pikiran**, atau lanjutkan ke **Kartu Belajar** untuk menghafal istilah penting.
+
+**Protokol sebelum pitch:** jalankan `bun run prewarm` agar hasil AI (ringkasan, kuis, kartu belajar) tersimpan di cache, lalu uji aplikasi dalam mode luring. Materi tetap tersedia dari salinan lokal saat jaringan mati.
 
 ---
 
@@ -109,7 +114,7 @@ flowchart TD
 | Backend | Hono + tRPC di Cloudflare Workers (deploy via Alchemy) |
 | Database | Cloudflare D1 (SQLite) + Drizzle ORM |
 | AI | DeepSeek `deepseek-chat` (server-side, timeout 8s, cache di D1) |
-| TTS | Web Speech API (di sisi klien) |
+| TTS/STT | Web Speech API (di sisi klien) |
 | PWA | `vite-plugin-pwa` — dapat dipasang & luring |
 
 ### Struktur Folder
@@ -144,6 +149,7 @@ Dibangun mengacu pada **WCAG 2.1 AA**:
 - Ukuran teks mulai 16px dan dapat diperbesar hingga **200%** tanpa merusak layout.
 - Informasi tidak pernah disampaikan hanya lewat warna.
 - Animasi (GSAP) menghormati `prefers-reduced-motion` **dan** preferensi "Kurangi animasi" di aplikasi.
+- Getar/haptic opsional ("Getar saat menekan") — nonaktif secara bawaan & hanya berjalan bila perangkat mendukung.
 - Font **OpenDyslexic** tersedia untuk profil disleksia.
 
 ---
@@ -166,7 +172,7 @@ Salin skema ke `.env` lokal (mis. `packages/infra/.env`) dan isi nilai rahasiany
 
 - **Timeout 8 detik** + 1 retry untuk setiap panggilan DeepSeek; kegagalan menampilkan banner fallback (layar tidak pernah kosong).
 - **Cache hasil AI di D1** dengan key = hash `(endpoint + versi prompt + input)` → respons identik tidak memanggil API ulang.
-- **Mode luring penuh (IndexedDB)** — materi, ringkasan, peta pikiran, dan kuis terakhir disalin ke perangkat (`apps/web/src/lib/offline/idb.ts`). Pustaka & Focus Reader memakai prioritas: server → salinan luring → seed statis, sehingga aplikasi tetap terbaca saat jaringan mati.
+- **Mode luring penuh (IndexedDB)** — materi, ringkasan, peta pikiran, kartu belajar, dan kuis terakhir disalin ke perangkat (`apps/web/src/lib/offline/idb.ts`). Pustaka & Focus Reader memakai prioritas: server → salinan luring → seed statis, sehingga aplikasi tetap terbaca saat jaringan mati.
 - Semua respons AI **divalidasi Zod** sebelum dikirim ke client.
 - **Verifikasi util kritis**: `bun run verify` (reading ruler, parser JSON LLM, guard anti-loop, STT, cache luring).
 
@@ -188,7 +194,15 @@ Sesuai Rules Lomba, peran AI dalam proyek ini:
 
 ## 🌱 Future Work
 
-Fitur berikut **belum dikerjakan** dan hanya ada di roadmap proposal (SRS Bagian 8): avatar isyarat **BISINDO 3D**, **AI Dialect Adapter** bahasa daerah, **OCR tulisan tangan** → flashcard, **Teacher & Parent Dashboard**, haptic feedback engine, sinkronisasi profil lintas perangkat, dan evaluasi khusus siswa tunarungu.
+Beberapa item roadmap berikut **sudah** dikerjakan sebagian karena waktu tersisa, sisanya tetap di proposal (SRS Bagian 8):
+
+**Sudah dikerjakan (bonus):**
+
+- **Haptic feedback** — getar opsional via `navigator.vibrate`, tersambung ke mikro-interaksi tekan (`lib/haptics.ts`, toggle "Getar saat menekan").
+- **Cadangan profil lintas perangkat** — simpan/pulihkan preferensi lewat "kode cadangan" (tabel `profile_backup`, prosedur `profile.save`/`profile.load`); tanpa akun.
+- **Kartu Belajar (flashcard)** — dibuat dari teks materi (FR-LEA-04).
+
+**Masih roadmap:** avatar isyarat **BISINDO 3D**, **AI Dialect Adapter** bahasa daerah, **OCR tulisan tangan** → flashcard (kartu saat ini dari teks materi, bukan tulisan tangan), **Teacher & Parent Dashboard** multi-pengguna, akun & sinkronisasi penuh antar-akun, dan evaluasi khusus siswa tunarungu.
 
 ---
 

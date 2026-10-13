@@ -7,6 +7,8 @@ import { FOCUS_NEED_LABELS, type FocusNeed } from "@/lib/stores/focus-profile";
 import { useFocusProfile } from "@/lib/stores/focus-profile-store";
 import { useProgressStore } from "@/lib/stores/progress-store";
 
+import { ProfileSyncCard } from "./components/profile-sync-card";
+
 export const Route = createFileRoute("/profil/")({
   component: ProfilComponent,
   head: () => ({
@@ -145,6 +147,8 @@ function ProfilComponent() {
           ))}
         </ul>
       </Card>
+
+      <ProfileSyncCard />
 
       <div>
         <Link

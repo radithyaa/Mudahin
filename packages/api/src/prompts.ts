@@ -103,6 +103,30 @@ export function buildExplainMessages(input: ExplainInput): DeepSeekMessage[] {
   ];
 }
 
+export function buildFlashcardMessages(
+  input: SimplifyInput
+): DeepSeekMessage[] {
+  return [
+    { role: "system", content: SYSTEM_BASE },
+    {
+      role: "user",
+      content: [
+        "Buat 4 sampai 6 kartu belajar (flashcard) dari materi berikut.",
+        "Setiap kartu punya satu istilah/kata kunci dan definisi singkatnya.",
+        "Definisi maksimal 15 kata dan memakai bahasa sehari-hari.",
+        profileHint(input.profile),
+        "Balas dengan JSON berbentuk:",
+        '{"deckTitle":"Judul singkat","cards":[{"term":"kata kunci","definition":"arti singkat"}]}',
+        "",
+        "MATERI:",
+        input.text,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    },
+  ];
+}
+
 export function buildMindMapMessages(input: SimplifyInput): DeepSeekMessage[] {
   return [
     { role: "system", content: SYSTEM_BASE },

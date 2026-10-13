@@ -48,6 +48,7 @@ export async function handlePrewarm(request: Request): Promise<Response> {
       // biome-ignore lint/performance/noAwaitInLoops: pra-panas harus berurutan agar tidak menabrak rate limit DeepSeek.
       await caller.ai.simplify({ text, level: "sederhana" });
       await caller.ai.quiz({ text, count: QUIZ_COUNT });
+      await caller.ai.flashcards({ text, level: "sederhana" });
       results.push({ id: material.id, ok: true });
     } catch (error) {
       results.push({

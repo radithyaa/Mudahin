@@ -1,4 +1,9 @@
-import type { MindMap, QuizResult, SimplifyResult } from "@mudahin/api/schemas";
+import type {
+  FlashcardDeck,
+  MindMap,
+  QuizResult,
+  SimplifyResult,
+} from "@mudahin/api/schemas";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect } from "react";
 
@@ -28,6 +33,10 @@ export function useExplain() {
 
 export function useMindMap() {
   return useMutation(trpc.ai.mindMap.mutationOptions());
+}
+
+export function useFlashcards() {
+  return useMutation(trpc.ai.flashcards.mutationOptions());
 }
 
 /** Pesan ramah untuk error AI — UI menampilkan banner, bukan layar kosong. */
@@ -73,4 +82,10 @@ export function readOfflineMindMap(
   materialId: string
 ): Promise<MindMap | null> {
   return getOfflineValue<MindMap>(offlineKey.mindMap(materialId));
+}
+
+export function readOfflineFlashcards(
+  materialId: string
+): Promise<FlashcardDeck | null> {
+  return getOfflineValue<FlashcardDeck>(offlineKey.flashcards(materialId));
 }

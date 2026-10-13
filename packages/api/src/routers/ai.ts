@@ -5,6 +5,7 @@ import { hashKey, readCache, writeCache } from "../cache";
 import { publicProcedure, router } from "../index";
 import {
   buildExplainMessages,
+  buildFlashcardMessages,
   buildMindMapMessages,
   buildQuizMessages,
   buildSimplifyMessages,
@@ -12,6 +13,9 @@ import {
 import {
   type ExplainResult,
   explainInputSchema,
+  type Flashcard,
+  type FlashcardDeck,
+  flashcardDeckSchema,
   type MindMap,
   type MindMapBranch,
   mindMapSchema,
@@ -20,6 +24,7 @@ import {
   type QuizResult,
   quizInputSchema,
   rawExplainResponseSchema,
+  rawFlashcardResponseSchema,
   rawMindMapResponseSchema,
   rawQuizResponseSchema,
   rawSimplifyResponseSchema,
@@ -230,7 +235,72 @@ export const aiRouter = router({
       });
       return result;
     }),
+
+  flashcards: publicProcedure
+    .input(simplifyInputSchema)
+    .mutation(async ({ ctx, input, signal }): Promise<FlashcardDeck> => {
+      const key = await hashKey(
+        "flashcards",
+        PROMPT_VERSION,
+        JSON.stringify(input)
+      );
+
+      const cached = await readCache<FlashcardDeck>(ctx.db, key);
+      if (cached) {
+        return { ...cached, cached: true };
+      }
+
+      const raw = await callAi(
+        () =>
+          chatJson({
+            config: deepSeekConfig(ctx),
+            messages: buildFlashcardMessages(input),
+            signal,
+          }),
+        "Gagal membuat kartu belajar"
+      );
+
+      const result = normalizeFlashcards(raw);
+      await writeCache(ctx.db, key, "flashcards", {
+        deckTitle: result.deckTitle,
+        cards: result.cards,
+      });
+      return result;
+    }),
 });
+
+/** Menormalkan respons flashcard mentah menjadi dek yang valid (FR-LEA-04). */
+function normalizeFlashcards(raw: unknown): FlashcardDeck {
+  const parsed = rawFlashcardResponseSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new TRPCError({
+      code: "BAD_GATEWAY",
+      message: "Format kartu belajar dari AI tidak sesuai.",
+    });
+  }
+
+  const deckTitle = parsed.data.deckTitle.trim() || "Kartu Belajar";
+  const cards = parsed.data.cards
+    .map((card, index): Flashcard | null => {
+      const term = card.term.trim();
+      const definition = card.definition.trim();
+      if (term.length === 0 || definition.length === 0) {
+        return null;
+      }
+      return { id: `c${index + 1}`, term, definition };
+    })
+    .filter((card): card is Flashcard => card !== null)
+    .slice(0, 6);
+
+  if (cards.length === 0) {
+    throw new TRPCError({
+      code: "BAD_GATEWAY",
+      message: "AI tidak menghasilkan kartu belajar yang valid.",
+    });
+  }
+
+  return flashcardDeckSchema.parse({ deckTitle, cards, cached: false });
+}
 
 /** Menormalkan respons mind map mentah menjadi struktur pohon yang valid. */
 function normalizeMindMap(raw: unknown): MindMap {

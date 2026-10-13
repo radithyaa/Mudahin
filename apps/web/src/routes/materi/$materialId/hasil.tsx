@@ -10,13 +10,14 @@ import {
 import {
   AlertTriangle,
   Check,
+  Layers,
   ListChecks,
   RefreshCw,
   Sparkles,
   X,
 } from "lucide-react";
 import { useCallback, useEffect } from "react";
-
+import { useRecordProgress } from "@/lib/hooks/use-record-progress";
 import { resolveMaterialById } from "@/lib/materials/seed";
 import { useProgressStore } from "@/lib/stores/progress-store";
 
@@ -41,6 +42,7 @@ function HasilComponent() {
   const navigate = useNavigate();
   const { entries, materialId, reset } = useQuizStore();
   const recordQuiz = useProgressStore((s) => s.recordQuiz);
+  const recordProgressToServer = useRecordProgress();
 
   const total = entries.length;
   const correctCount = entries.filter(
@@ -52,8 +54,16 @@ function HasilComponent() {
   useEffect(() => {
     if (materialId === material.id && entries.length > 0) {
       recordQuiz(material.id, score);
+      recordProgressToServer(material.id, score);
     }
-  }, [entries.length, material.id, materialId, recordQuiz, score]);
+  }, [
+    entries.length,
+    material.id,
+    materialId,
+    recordProgressToServer,
+    recordQuiz,
+    score,
+  ]);
 
   // Tanpa data sesi (mis. refresh halaman) → arahkan kembali ke kuis.
   useEffect(() => {
@@ -161,14 +171,23 @@ function HasilComponent() {
         </Card>
       )}
 
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="grid gap-2 sm:grid-cols-2">
         {wrongEntries.length > 0 ? (
-          <Button className="min-h-12 flex-1" onClick={retryWrong} size="lg">
+          <Button className="min-h-12 w-full" onClick={retryWrong} size="lg">
             <RefreshCw aria-hidden="true" /> Ulangi Bagian Salah
           </Button>
         ) : null}
         <Link
-          className="flex-1"
+          className="w-full"
+          params={{ materialId: material.id }}
+          to="/materi/$materialId/flashcard"
+        >
+          <Button className="min-h-12 w-full" size="lg" variant="outline">
+            <Layers aria-hidden="true" /> Kartu Belajar
+          </Button>
+        </Link>
+        <Link
+          className="w-full"
           params={{ materialId: material.id }}
           to="/materi/$materialId/ringkasan"
         >

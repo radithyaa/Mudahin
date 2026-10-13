@@ -55,6 +55,7 @@ export const useFocusProfile = create<FocusProfileState>()(
         highContrast: state.highContrast,
         readingRuler: state.readingRuler,
         reduceMotion: state.reduceMotion,
+        haptics: state.haptics,
         onboardingComplete: state.onboardingComplete,
         needs: state.needs,
       }),

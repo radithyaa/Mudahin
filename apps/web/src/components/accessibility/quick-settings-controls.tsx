@@ -36,6 +36,7 @@ export function QuickSettingsControls() {
     highContrast,
     readingRuler,
     reduceMotion,
+    haptics,
     setPreferences,
   } = useFocusProfile();
 
@@ -65,6 +66,10 @@ export function QuickSettingsControls() {
   );
   const handleReduceMotion = useCallback(
     (checked: boolean) => setPreferences({ reduceMotion: checked }),
+    [setPreferences]
+  );
+  const handleHaptics = useCallback(
+    (checked: boolean) => setPreferences({ haptics: checked }),
     [setPreferences]
   );
 
@@ -137,6 +142,13 @@ export function QuickSettingsControls() {
           id="quick-reduce-motion"
           label="Kurangi animasi"
           onChange={handleReduceMotion}
+        />
+        <ToggleRow
+          checked={haptics}
+          description="Getar singkat saat tombol ditekan (bila perangkat mendukung)."
+          id="quick-haptics"
+          label="Getar saat menekan"
+          onChange={handleHaptics}
         />
       </div>
     </div>

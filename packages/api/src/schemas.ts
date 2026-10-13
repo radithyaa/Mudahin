@@ -141,3 +141,31 @@ export const rawMindMapResponseSchema = z.object({
     })
   ),
 });
+
+/**
+ * Flashcard hasil AI (FR-LEA-04) — Should-Have.
+ * Satu kartu berisi pertanyaan singkat + jawaban, diturunkan dari materi.
+ */
+export const flashcardSchema = z.object({
+  id: z.string().min(1),
+  term: z.string().min(1),
+  definition: z.string().min(1),
+});
+export type Flashcard = z.infer<typeof flashcardSchema>;
+
+export const flashcardDeckSchema = z.object({
+  deckTitle: z.string().min(1),
+  cards: z.array(flashcardSchema).min(1, "Minimal satu kartu"),
+  cached: z.boolean(),
+});
+export type FlashcardDeck = z.infer<typeof flashcardDeckSchema>;
+
+export const rawFlashcardResponseSchema = z.object({
+  deckTitle: z.string(),
+  cards: z.array(
+    z.object({
+      term: z.string(),
+      definition: z.string(),
+    })
+  ),
+});

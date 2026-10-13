@@ -56,11 +56,14 @@ export const NEUTRAL_PROFILE = {
   highContrast: false,
   readingRuler: false,
   reduceMotion: false,
+  haptics: false,
 } as const;
 
 export interface AccessibilityPreferences {
   fontFamily: FontFamily;
   fontSize: number;
+  /** Umpan balik getar saat menekan (Future Work; hormati dukungan perangkat). */
+  haptics: boolean;
   highContrast: boolean;
   letterSpacing: number;
   lineHeight: number;

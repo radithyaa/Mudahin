@@ -98,4 +98,6 @@ export const offlineKey = {
   summary: (materialId: string) => `summary:${materialId}`,
   quiz: (materialId: string) => `quiz:${materialId}`,
   mindMap: (materialId: string) => `mindmap:${materialId}`,
+  flashcards: (materialId: string) => `flashcards:${materialId}`,
+  progress: "progress:summary",
 };

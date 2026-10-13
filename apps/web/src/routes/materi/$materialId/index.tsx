@@ -1,7 +1,7 @@
 import { Button } from "@mudahin/ui/components/button";
 import { Card } from "@mudahin/ui/components/card";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowLeft, ListChecks, Ruler, Sparkles } from "lucide-react";
+import { ArrowLeft, Layers, ListChecks, Ruler, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { upsertCachedMaterial } from "@/lib/materials/cache";
@@ -9,6 +9,7 @@ import { materialToText, resolveMaterialById } from "@/lib/materials/seed";
 import { useFocusProfile } from "@/lib/stores/focus-profile-store";
 import { useProgressStore } from "@/lib/stores/progress-store";
 import { ExplainSheet, useSelectedText } from "../components/explain-sheet";
+import { FocusModeToggle, FocusModeView } from "../components/focus-mode-view";
 import { HighlightedText } from "../components/highlighted-text";
 import { ReaderSettingsSheet } from "../components/reader-settings-sheet";
 import { ReadingRuler } from "../components/reading-ruler";
@@ -93,6 +94,12 @@ function FocusReaderComponent() {
         <ReadingRuler isDragging={isDragging} onStartDrag={startDrag} y={y} />
       ) : null}
 
+      <FocusModeView
+        activeParagraph={activeParagraph}
+        isSpeaking={isSpeaking}
+        material={material}
+      />
+
       <main className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4 pb-40 sm:gap-6 sm:py-6">
         <header className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-muted-foreground text-xs">
@@ -141,7 +148,7 @@ function FocusReaderComponent() {
             Ubah materi ini menjadi poin-poin sederhana, lalu uji pemahamanmu
             dengan kuis singkat.
           </p>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-3">
             <Link
               className="w-full"
               params={{ materialId: material.id }}
@@ -149,6 +156,15 @@ function FocusReaderComponent() {
             >
               <Button className="min-h-11 w-full text-sm" variant="outline">
                 <Sparkles aria-hidden="true" /> Sederhanakan
+              </Button>
+            </Link>
+            <Link
+              className="w-full"
+              params={{ materialId: material.id }}
+              to="/materi/$materialId/flashcard"
+            >
+              <Button className="min-h-11 w-full text-sm" variant="outline">
+                <Layers aria-hidden="true" /> Kartu Belajar
               </Button>
             </Link>
             <Link
@@ -173,6 +189,7 @@ function FocusReaderComponent() {
             </Button>
           </Link>
           <div className="flex items-center gap-2">
+            <FocusModeToggle />
             <Button
               aria-pressed={readingRulerEnabled}
               onClick={toggleRuler}
