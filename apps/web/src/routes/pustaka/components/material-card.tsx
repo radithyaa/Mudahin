@@ -3,12 +3,17 @@ import { Card } from "@mudahin/ui/components/card";
 import { Link } from "@tanstack/react-router";
 import { BookOpen, Clock } from "lucide-react";
 
+import { usePressFeedback } from "@/hooks/use-press-feedback";
+
 /** Kartu satu materi di Pustaka. */
 export function MaterialCard({ material }: { material: Material }) {
+  const pressRef = usePressFeedback<HTMLAnchorElement>();
+
   return (
     <Link
-      className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]"
+      className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
       params={{ materialId: material.id }}
+      ref={pressRef}
       to="/materi/$materialId"
     >
       <Card className="flex h-full flex-col gap-2 p-4 transition-colors hover:bg-muted">

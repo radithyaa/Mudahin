@@ -93,6 +93,8 @@ export async function getOfflineValue<T>(key: string): Promise<T | null> {
 
 /** Kunci luring per materi untuk tiap jenis data. */
 export const offlineKey = {
+  /** Daftar pustaka materi (FR-PRF-04) — agar pustaka tetap terbuka luring. */
+  materials: "materials:list",
   summary: (materialId: string) => `summary:${materialId}`,
   quiz: (materialId: string) => `quiz:${materialId}`,
   mindMap: (materialId: string) => `mindmap:${materialId}`,

@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { getFallbackMaterialById, materialToText } from "@/lib/materials/seed";
+import { materialToText, resolveMaterialById } from "@/lib/materials/seed";
 import { offlineKey } from "@/lib/offline/idb";
 import type { FocusNeed } from "@/lib/stores/focus-profile";
 import { useFocusProfile } from "@/lib/stores/focus-profile-store";
@@ -37,8 +37,8 @@ import {
 
 export const Route = createFileRoute("/materi/$materialId/ringkasan")({
   component: RingkasanComponent,
-  loader: ({ params }) => {
-    const material = getFallbackMaterialById(params.materialId);
+  loader: async ({ params }) => {
+    const material = await resolveMaterialById(params.materialId);
     if (!material) {
       throw notFound();
     }

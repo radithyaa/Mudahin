@@ -20,9 +20,12 @@ import { TTS_RATE_DEFAULT, TtsControls } from "./tts-controls";
  * Dibuka dari tombol mengambang saat ada teks tersorot.
  */
 export function ExplainSheet({
+  hasSelection,
   materialTitle,
   onRequestText,
 }: {
+  /** Apakah pengguna sedang menyorot teks — menentukan penanda tombol. */
+  hasSelection: boolean;
   materialTitle: string;
   onRequestText: () => string;
 }) {
@@ -88,9 +91,27 @@ export function ExplainSheet({
       swipeDirection="down"
     >
       <DrawerTrigger
-        render={<Button className="shadow-lg" size="lg" variant="default" />}
+        render={
+          <Button
+            aria-label={
+              hasSelection
+                ? "Jelaskan teks yang dipilih"
+                : "Jelaskan ini — sorot teks dulu"
+            }
+            className="shadow-lg"
+            size="lg"
+            variant="default"
+          />
+        }
       >
-        <HelpCircle aria-hidden="true" /> Jelaskan ini
+        <HelpCircle aria-hidden="true" />
+        <span>Jelaskan ini</span>
+        {hasSelection ? (
+          <span
+            aria-hidden="true"
+            className="size-2 rounded-full bg-primary-foreground"
+          />
+        ) : null}
       </DrawerTrigger>
 
       <DrawerContent className="mx-auto max-w-lg rounded-t-2xl border shadow-xl">
@@ -171,19 +192,30 @@ export function ExplainSheet({
 export function useSelectedText(): {
   clear: () => void;
   getSelectedText: () => string;
+  hasSelection: boolean;
 } {
   const [last, setLast] = useState("");
+  const [hasSelection, setHasSelection] = useState(false);
 
   useEffect(() => {
-    const handleSelectionEnd = () => {
+    const capture = () => {
       const text = window.getSelection()?.toString() ?? "";
       if (text.trim().length > 0) {
         setLast(text);
+        setHasSelection(true);
       }
     };
-    document.addEventListener("selectionchange", handleSelectionEnd);
-    return () =>
-      document.removeEventListener("selectionchange", handleSelectionEnd);
+    // `selectionchange` cukup di desktop; di peramban sentuh (iOS/Android) event
+    // ini sering tidak terpicu saat seleksi long-press, sehingga kita juga
+    // menangkap pada akhir sentuhan/pointer (mobile-first, gesture friendly).
+    document.addEventListener("selectionchange", capture);
+    document.addEventListener("pointerup", capture);
+    document.addEventListener("touchend", capture);
+    return () => {
+      document.removeEventListener("selectionchange", capture);
+      document.removeEventListener("pointerup", capture);
+      document.removeEventListener("touchend", capture);
+    };
   }, []);
 
   const getSelectedText = useCallback(() => {
@@ -193,5 +225,5 @@ export function useSelectedText(): {
 
   const clear = useCallback(() => setLast(""), []);
 
-  return { clear, getSelectedText };
+  return { clear, getSelectedText, hasSelection };
 }

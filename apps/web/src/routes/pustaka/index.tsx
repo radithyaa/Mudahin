@@ -1,11 +1,9 @@
 import { Card } from "@mudahin/ui/components/card";
-import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { SearchX } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
-import { FALLBACK_MATERIALS } from "@/lib/materials/seed";
-import { trpc } from "@/utils/trpc";
+import { useMaterials } from "@/lib/materials/use-materials";
 
 import { MaterialCard } from "./components/material-card";
 import { SubjectFilterSheet } from "./components/subject-filter-sheet";
@@ -18,9 +16,8 @@ export const Route = createFileRoute("/pustaka/")({
 });
 
 function PustakaComponent() {
-  // Ambil dari server; pakai salinan luring bila gagal (strategi ketahanan demo).
-  const materialsQuery = useQuery(trpc.materials.list.queryOptions());
-  const materials = materialsQuery.data ?? FALLBACK_MATERIALS;
+  // Server → salinan luring (IndexedDB) → seed: pustaka selalu bisa dibuka.
+  const { materials, source } = useMaterials();
 
   const subjects = useMemo(
     () => [...new Set(materials.map((m) => m.subject))].sort(),
@@ -60,6 +57,12 @@ function PustakaComponent() {
           subjects={subjects}
         />
       </header>
+
+      {source === "offline" ? (
+        <p className="text-muted-foreground text-xs" role="status">
+          Ditampilkan dari salinan luring di perangkat.
+        </p>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
         {visibleMaterials.map((material) => (

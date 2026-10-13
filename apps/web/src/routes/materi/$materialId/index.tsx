@@ -4,7 +4,8 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, ListChecks, Ruler, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { getFallbackMaterialById, materialToText } from "@/lib/materials/seed";
+import { upsertCachedMaterial } from "@/lib/materials/cache";
+import { materialToText, resolveMaterialById } from "@/lib/materials/seed";
 import { useFocusProfile } from "@/lib/stores/focus-profile-store";
 import { useProgressStore } from "@/lib/stores/progress-store";
 import { ExplainSheet, useSelectedText } from "../components/explain-sheet";
@@ -21,8 +22,8 @@ import {
 
 export const Route = createFileRoute("/materi/$materialId/")({
   component: FocusReaderComponent,
-  loader: ({ params }) => {
-    const material = getFallbackMaterialById(params.materialId);
+  loader: async ({ params }) => {
+    const material = await resolveMaterialById(params.materialId);
     if (!material) {
       throw notFound();
     }
@@ -39,11 +40,17 @@ function FocusReaderComponent() {
   const setPreferences = useFocusProfile((s) => s.setPreferences);
   const markRead = useProgressStore((s) => s.markRead);
   const { isDragging, startDrag, y } = useReadingRuler(readingRulerEnabled);
-  const { getSelectedText } = useSelectedText();
+  const { getSelectedText, hasSelection } = useSelectedText();
 
   useEffect(() => {
     markRead(material.id);
   }, [markRead, material.id]);
+
+  // Simpan materi ini ke salinan luring agar pembacaan berikutnya tetap jalan
+  // tanpa jaringan (FR-PRF-06).
+  useEffect(() => {
+    upsertCachedMaterial(material).catch(() => undefined);
+  }, [material]);
 
   const [rate, setRate] = useState(TTS_RATE_DEFAULT);
   const [activeParagraph, setActiveParagraph] = useState(0);
@@ -175,6 +182,7 @@ function FocusReaderComponent() {
               <Ruler aria-hidden="true" /> Pemandu
             </Button>
             <ExplainSheet
+              hasSelection={hasSelection}
               materialTitle={material.title}
               onRequestText={getSelectedText}
             />

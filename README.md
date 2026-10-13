@@ -166,8 +166,9 @@ Salin skema ke `.env` lokal (mis. `packages/infra/.env`) dan isi nilai rahasiany
 
 - **Timeout 8 detik** + 1 retry untuk setiap panggilan DeepSeek; kegagalan menampilkan banner fallback (layar tidak pernah kosong).
 - **Cache hasil AI di D1** dengan key = hash `(endpoint + versi prompt + input)` → respons identik tidak memanggil API ulang.
-- **Salinan materi lokal** sebagai fallback luring.
+- **Mode luring penuh (IndexedDB)** — materi, ringkasan, peta pikiran, dan kuis terakhir disalin ke perangkat (`apps/web/src/lib/offline/idb.ts`). Pustaka & Focus Reader memakai prioritas: server → salinan luring → seed statis, sehingga aplikasi tetap terbaca saat jaringan mati.
 - Semua respons AI **divalidasi Zod** sebelum dikirim ke client.
+- **Verifikasi util kritis**: `bun run verify` (reading ruler, parser JSON LLM, guard anti-loop, STT, cache luring).
 
 ---
 

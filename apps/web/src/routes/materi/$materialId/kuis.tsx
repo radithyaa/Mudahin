@@ -11,7 +11,7 @@ import {
 import { AlertTriangle, ArrowLeft, ListChecks, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { getFallbackMaterialById, materialToText } from "@/lib/materials/seed";
+import { materialToText, resolveMaterialById } from "@/lib/materials/seed";
 import type { FocusNeed } from "@/lib/stores/focus-profile";
 import { useFocusProfile } from "@/lib/stores/focus-profile-store";
 
@@ -30,8 +30,8 @@ const QUESTION_COUNT = 4;
 
 export const Route = createFileRoute("/materi/$materialId/kuis")({
   component: KuisComponent,
-  loader: ({ params }) => {
-    const material = getFallbackMaterialById(params.materialId);
+  loader: async ({ params }) => {
+    const material = await resolveMaterialById(params.materialId);
     if (!material) {
       throw notFound();
     }

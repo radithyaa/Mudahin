@@ -86,7 +86,7 @@ export function PrimaryAction() {
 
   return (
     <Link
-      className="flex min-h-28 items-center gap-4 rounded-xl border border-primary bg-primary/5 p-5 transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]"
+      className="flex min-h-28 items-center gap-4 rounded-xl border border-primary bg-primary/5 p-5 transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       ref={pressRef}
       to="/pustaka"
     >

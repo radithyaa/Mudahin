@@ -17,15 +17,15 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect } from "react";
 
-import { getFallbackMaterialById } from "@/lib/materials/seed";
+import { resolveMaterialById } from "@/lib/materials/seed";
 import { useProgressStore } from "@/lib/stores/progress-store";
 
 import { useQuizStore } from "../stores/quiz-store";
 
 export const Route = createFileRoute("/materi/$materialId/hasil")({
   component: HasilComponent,
-  loader: ({ params }) => {
-    const material = getFallbackMaterialById(params.materialId);
+  loader: async ({ params }) => {
+    const material = await resolveMaterialById(params.materialId);
     if (!material) {
       throw notFound();
     }

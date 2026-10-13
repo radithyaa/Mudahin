@@ -62,10 +62,47 @@ export interface UseSpeechRecognitionResult {
   transcript: string;
 }
 
+/**
+ * Menggabungkan hasil baru dengan transkrip final sebelumnya.
+ *
+ * Event Web Speech hanya memuat hasil yang berubah sejak `resultIndex`, dan
+ * hasil final tiba bertahap. Fungsi murni ini mengumpulkan hasil final
+ * (`finalRef`) lalu menambahkan interim terbaru, sehingga ucapan yang sudah
+ * dikonfirmasi tidak hilang saat event berikutnya melompat maju.
+ *
+ * @returns transkrip gabungan & nilai final terbaru untuk disimpan pemanggil.
+ */
+export function combineSpeechResults(
+  event: {
+    resultIndex: number;
+    results: { length: number; [index: number]: SpeechRecognitionResultLike };
+  },
+  previousFinal: string
+): { final: string; transcript: string } {
+  let final = previousFinal;
+  for (let i = event.resultIndex; i < event.results.length; i += 1) {
+    const result = event.results[i];
+    if (result?.isFinal) {
+      final += result[0].transcript;
+    }
+  }
+
+  let interim = "";
+  for (let i = event.resultIndex; i < event.results.length; i += 1) {
+    const result = event.results[i];
+    if (result && !result.isFinal) {
+      interim += result[0].transcript;
+    }
+  }
+
+  return { final, transcript: `${final}${interim}`.trim() };
+}
+
 export function useSpeechRecognition(): UseSpeechRecognitionResult {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const finalTranscriptRef = useRef("");
   const isSupported = getRecognitionCtor() !== null;
 
   const stop = useCallback(() => {
@@ -76,6 +113,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionResult {
   const cancel = useCallback(() => {
     recognitionRef.current?.abort();
     setIsListening(false);
+    finalTranscriptRef.current = "";
     setTranscript("");
   }, []);
 
@@ -87,6 +125,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionResult {
 
     // Hentikan sesi sebelumnya bila ada.
     recognitionRef.current?.abort();
+    finalTranscriptRef.current = "";
 
     const recognition = new Ctor();
     recognition.lang = "id-ID";
@@ -94,14 +133,16 @@ export function useSpeechRecognition(): UseSpeechRecognitionResult {
     recognition.interimResults = true;
 
     recognition.onresult = (event) => {
-      let text = "";
-      for (let i = event.resultIndex; i < event.results.length; i += 1) {
-        const result = event.results[i];
-        if (result) {
-          text += result[0].transcript;
-        }
+      // Hasil final dikumpulkan lewat ref agar tidak hilang walau event
+      // berikutnya melompat (`resultIndex` menunjuk hasil terbaru saja).
+      const { final, transcript: combined } = combineSpeechResults(
+        event,
+        finalTranscriptRef.current
+      );
+      finalTranscriptRef.current = final;
+      if (combined.length > 0) {
+        setTranscript(combined);
       }
-      setTranscript(text.trim());
     };
     recognition.onerror = () => setIsListening(false);
     recognition.onend = () => setIsListening(false);
