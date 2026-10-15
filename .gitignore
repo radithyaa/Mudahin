@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+# Env publik build (hanya VITE_* non-rahasia) — ikut di-commit agar APK
+# terhubung ke server produksi.
+!.env.production

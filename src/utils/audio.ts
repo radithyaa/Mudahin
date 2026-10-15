@@ -1,16 +1,19 @@
-// Web Audio API gentle sound effects generator for tactile sensory feedback
+// Efek suara taktil (Web Audio API) + pembacaan teks (TTS dengan fallback server).
 
 class SoundManager {
   private ctx: AudioContext | null = null;
 
   private initCtx() {
     if (!this.ctx) {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
       }
     }
-    if (this.ctx && this.ctx.state === 'suspended') {
+    if (this.ctx && this.ctx.state === "suspended") {
       this.ctx.resume();
     }
   }
@@ -19,15 +22,23 @@ class SoundManager {
   playTap() {
     try {
       this.initCtx();
-      if (!this.ctx) return;
+      if (!this.ctx) {
+        return;
+      }
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      osc.type = 'sine';
+      osc.type = "sine";
       osc.frequency.setValueAtTime(320, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.05);
+      osc.frequency.exponentialRampToValueAtTime(
+        120,
+        this.ctx.currentTime + 0.05
+      );
 
       gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+      gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        this.ctx.currentTime + 0.05
+      );
 
       osc.connect(gain);
       gain.connect(this.ctx.destination);
@@ -42,14 +53,18 @@ class SoundManager {
   playSuccess() {
     try {
       this.initCtx();
-      if (!this.ctx) return;
+      if (!this.ctx) {
+        return;
+      }
       const now = this.ctx.currentTime;
       const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
       notes.forEach((freq, idx) => {
-        if (!this.ctx) return;
+        if (!this.ctx) {
+          return;
+        }
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
-        osc.type = 'triangle';
+        osc.type = "triangle";
         osc.frequency.setValueAtTime(freq, now + idx * 0.08);
 
         gain.gain.setValueAtTime(0.12, now + idx * 0.08);
@@ -69,11 +84,13 @@ class SoundManager {
   playSoftError() {
     try {
       this.initCtx();
-      if (!this.ctx) return;
+      if (!this.ctx) {
+        return;
+      }
       const now = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      osc.type = 'sine';
+      osc.type = "sine";
       osc.frequency.setValueAtTime(220, now);
       osc.frequency.exponentialRampToValueAtTime(180, now + 0.15);
 
@@ -93,11 +110,13 @@ class SoundManager {
   playFlip() {
     try {
       this.initCtx();
-      if (!this.ctx) return;
+      if (!this.ctx) {
+        return;
+      }
       const now = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      osc.type = 'sine';
+      osc.type = "sine";
       osc.frequency.setValueAtTime(400, now);
       osc.frequency.exponentialRampToValueAtTime(800, now + 0.08);
 
@@ -115,37 +134,24 @@ class SoundManager {
 }
 
 export const soundEffects = new SoundManager();
+export type { SpeakOptions } from "../lib/speech";
 
-// Text to speech helper for Indonesian
-export function speakText(text: string, rate = 0.95, onEnd?: () => void) {
-  if (!('speechSynthesis' in window)) {
-    onEnd?.();
-    return;
-  }
-
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'id-ID';
-  utterance.rate = rate;
-  utterance.pitch = 1.05;
-
-  // Try to pick an Indonesian voice if available
-  const voices = window.speechSynthesis.getVoices();
-  const idVoice = voices.find((v) => v.lang.startsWith('id') || v.lang.includes('ID'));
-  if (idVoice) {
-    utterance.voice = idVoice;
-  }
-
-  if (onEnd) {
-    utterance.onend = onEnd;
-    utterance.onerror = onEnd;
-  }
-
-  window.speechSynthesis.speak(utterance);
-}
-
-export function stopSpeech() {
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-  }
-}
+/**
+ * Utilitas pembacaan suara (Text-to-Speech).
+ *
+ * Implementasinya hidup di `lib/speech.ts` karena kini punya **dua jalur**:
+ * Web Speech API perangkat dan fallback server (Gemini TTS) untuk WebView
+ * Android/APK yang tidak punya mesin suara. Modul ini hanya menjadi pintu depan
+ * yang stabil bagi komponen UI, agar `speakText`/`stopSpeech` tetap satu tempat.
+ *
+ * Re-export dari satu modul ini disengaja (bukan barrel umum): seluruh UI sudah
+ * mengimpor `speakText`/`stopSpeech` dari sini, sehingga memindahkan implementasi
+ * ke `lib/speech.ts` tidak memaksa menyentuh setiap komponen.
+ */
+// biome-ignore lint/performance/noBarrelFile: sengaja — menjaga impor lama komponen tetap valid tanpa mengubah puluhan berkas.
+export {
+  pickVoice,
+  speakSequence,
+  speakText,
+  stopSpeech,
+} from "../lib/speech";

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+        Fitur suara (FR-AUD): pembacaan teks (TTS) & menjawab dengan suara (STT).
+        - RECORD_AUDIO diperlukan SpeechRecognition.
+        - QUERIES agar Android 11+ dapat menemukan mesin Text-To-Speech sistem; tanpa
+          ini WebView tidak dapat memanggil layanan TTS (tombol suara tampak mati).
+    -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
+
+    <!-- AndroidTV support -->
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+
+    <application
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.app"
+        android:usesCleartextTraffic="${usesCleartextTraffic}"
+        tools:targetApi="33">
+        <!--
+            Aplikasi menggambar sampai tepi layar (edge-to-edge), lalu UI sendiri
+            yang menahan konten dengan `env(safe-area-inset-*)`. Pada Android 9–14
+            cutout harus diizinkan eksplisit agar area notch/kamera tetap bisa
+            dipakai; Android 15+ sudah edge-to-edge secara bawaan.
+        -->
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+            android:launchMode="singleTask"
+            android:label="@string/main_activity_title"
+            android:name=".MainActivity"
+            android:exported="true"
+            android:resizeableActivity="true"
+            android:windowSoftInputMode="adjustResize"
+            tools:targetApi="35">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <!-- AndroidTV support -->
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <provider
+          android:name="androidx.core.content.FileProvider"
+          android:authorities="${applicationId}.fileprovider"
+          android:exported="false"
+          android:grantUriPermissions="true">
+          <meta-data
+            android:name="android.support.FILE_PROVIDER_PATHS"
+            android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+</manifest>
