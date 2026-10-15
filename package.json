@@ -13,6 +13,7 @@
     "desktop:dev": "tauri dev",
     "dev": "vite --port=3002 --host=0.0.0.0",
     "dev:bare": "vite dev",
+    "icons:generate": "bash scripts/generate-app-icons.sh",
     "lint": "tsc --noEmit",
     "serve": "vite preview",
     "tauri": "tauri"

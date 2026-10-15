@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!--
+    Latar ikon adaptif Android (mipmap foreground/background dipisah).
+    Android memberi mask-nya sendiri, jadi latar ini penuh (tanpa sudut rounded).
+  -->
+  <rect width="1024" height="1024" fill="#4f46e5"/>
+</svg>
