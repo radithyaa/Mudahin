@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #faf8ff;
+    color: #131b2e;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
+
+.material-symbols-outlined.fill-icon {
+  font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Tactile 3D Button micro-interactions */
+.tactile-btn {
+  transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
+  user-select: none;
+}
+
+.tactile-btn:active {
+  transform: translateY(3px) !important;
+  box-shadow: 0 0 0 0 transparent !important;
+}
+
+.tactile-chip {
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  user-select: none;
+}
+
+.tactile-chip:active {
+  transform: translateY(2px);
+}
+
+.pill-active-nav {
+  transform: translateY(0);
+  transition: transform 0.1s;
+}
+
+.pill-active-nav:active {
+  transform: translateY(2px);
+}
+
+/* Dyslexia-friendly font mode */
+.font-dyslexia {
+  font-family: 'Lexend', 'Comic Sans MS', sans-serif !important;
+  letter-spacing: 0.04em !important;
+  word-spacing: 0.15em !important;
+  line-height: 1.8 !important;
+}
+
+/* Warm sepia eye-care mode */
+.theme-warm {
+  background-color: #fbf7ee !important;
+  filter: sepia(0.12) saturate(0.95);
+}
+
+.theme-warm .bg-background,
+.theme-warm .bg-surface {
+  background-color: #fbf7ee !important;
+}
+
+/* Reading ruler overlay */
+.reading-guide-line {
+  pointer-events: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 44px;
+  background: rgba(245, 158, 11, 0.14);
+  border-top: 2px solid rgba(245, 158, 11, 0.5);
+  border-bottom: 2px solid rgba(245, 158, 11, 0.5);
+  z-index: 999;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.12);
+  transition: top 0.08s ease-out;
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
