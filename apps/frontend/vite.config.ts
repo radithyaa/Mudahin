@@ -45,10 +45,13 @@ export default defineConfig(() => {
         registerType: "autoUpdate",
         workbox: { globPatterns: ["**/*.{js,css,html,png,svg,ico}"] },
         manifest: {
-          name: "mudahin",
-          short_name: "mudahin",
-          description: "mudahin - PWA Application",
-          theme_color: "#0c0c0c",
+          name: "Mudahin - Dashboard Belajar AI & Pusat Latihan Asyik",
+          short_name: "Mudahin",
+          description:
+            "Aplikasi belajar inklusif ramah neurodiversitas: ringkasan catatan AI, garis baca fokus, audio narasi, flashcard, dan kuis adaptif.",
+          lang: "id",
+          theme_color: "#4f46e5",
+          background_color: "#faf8ff",
         },
         pwaAssets: { disabled: false, config: true },
         devOptions: { enabled: true },
