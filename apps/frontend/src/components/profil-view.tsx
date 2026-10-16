@@ -1,23 +1,45 @@
 import confetti from "canvas-confetti";
 import type React from "react";
 import { useState } from "react";
-import type { UiAccessibilitySettings } from "../lib/api/profile";
-import { useProfileBackup } from "../lib/hooks/use-profile-backup";
+import { useDeviceBackup } from "../lib/hooks/use-device-backup";
 import { soundEffects } from "../utils/audio";
+
+/** Setelan aksesibilitas yang ikut dicadangkan & dipulihkan. */
+export interface BackupSettings {
+  dyslexiaFont: boolean;
+  fontSize: "sm" | "md" | "lg" | "xl";
+  readingRuler: boolean;
+  speechSpeed: number;
+  warmTheme: boolean;
+}
 
 interface ProfilViewProps {
   canClaimBonus: boolean;
   completedMissions: number;
   onClaimDailyBonus: () => void;
-  /** Dipanggil saat setelan berhasil dipulihkan dari kode cadangan. */
-  onRestoreSettings: (settings: UiAccessibilitySettings) => void;
-  /** Ringkasan progres dari backend (`progress.summary`), bila tersedia. */
+  /**
+   * Dipanggil setelah data berhasil dipulihkan dari kode cadangan.
+   *
+   * Komponen ini tidak menulis ke store langsung (batas UI ⇆ `lib/`), jadi
+   * pemilik state di `app.tsx` yang menyamakan setelan & mengambil ulang data.
+   */
+  onRestored: (info: {
+    gamification: {
+      xp: number;
+      lastActiveDate: string | null;
+      streakDays: number;
+    };
+    materials: number;
+    progress: number;
+    settings: BackupSettings;
+  }) => void;
+  /** Ringkasan progres dari server (`progress.summary`), bila tersedia. */
   progress?: {
     quizzedCount: number;
     averageScore: number;
   };
   /** Setelan aksesibilitas aktif untuk dicadangkan ke server. */
-  settings: UiAccessibilitySettings;
+  settings: BackupSettings;
   streakDays: number;
   xp: number;
 }
@@ -26,8 +48,11 @@ interface ProfilViewProps {
  * Profil & Progres.
  *
  * Menampilkan gamifikasi (XP/level/lencana) plus ringkasan progres dari server,
- * dan menyediakan **cadangan profil lintas perangkat** lewat kode cadangan
- * (`profile.save` / `profile.load`) — tanpa akun.
+ * dan menyediakan **cadangan data lintas perangkat** lewat kode cadangan
+ * (`backup.save` / `backup.load`) — tanpa akun.
+ *
+ * Tanpa pemulihan, perangkat baru selalu mulai dari nol; kartu di bawah inilah
+ * satu-satunya pintu untuk membawa kembali setelan, pustaka materi, dan skor.
  */
 export const ProfilView: React.FC<ProfilViewProps> = ({
   xp,
@@ -36,12 +61,13 @@ export const ProfilView: React.FC<ProfilViewProps> = ({
   onClaimDailyBonus,
   canClaimBonus,
   settings,
-  onRestoreSettings,
+  onRestored,
   progress,
 }) => {
-  const { saveSettings, loadSettings, isSaving } = useProfileBackup();
+  const { createBackup, restoreBackup, isSaving } = useDeviceBackup();
   const [syncCode, setSyncCode] = useState("");
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
+  const [backupFailed, setBackupFailed] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
 
   const currentLevel = Math.floor(xp / 50) + 1;
@@ -90,45 +116,59 @@ export const ProfilView: React.FC<ProfilViewProps> = ({
     },
   ];
 
-  /** Menyimpan snapshot setelan ke server dengan kode yang dipilih pengguna. */
+  /** Menyimpan snapshot seluruh data perangkat dengan kode pilihan pengguna. */
   const handleSave = async () => {
     const code = syncCode.trim();
     soundEffects.playTap();
     if (code.length < 4) {
+      setBackupFailed(true);
       setBackupStatus("Kode cadangan minimal 4 karakter.");
       return;
     }
     try {
-      await saveSettings(code, settings);
-      setBackupStatus(`Setelan tersimpan. Simpan kode ini: ${code}`);
+      const result = await createBackup(code, settings);
+      setBackupFailed(false);
+      setBackupStatus(
+        `Data tersimpan: ${result.materials} materi & ${result.progress} skor. Simpan kode ini: ${code}`
+      );
     } catch {
+      setBackupFailed(true);
       setBackupStatus(
         "Gagal menyimpan cadangan. Periksa koneksi lalu coba lagi."
       );
     }
   };
 
-  /** Memulihkan setelan dari server berdasarkan kode cadangan. */
+  /** Memulihkan seluruh data (setelan, pustaka materi, skor) dari kode. */
   const handleLoad = async () => {
     const code = syncCode.trim();
     soundEffects.playTap();
     if (code.length < 4) {
+      setBackupFailed(true);
       setBackupStatus("Kode cadangan minimal 4 karakter.");
       return;
     }
     try {
       setIsRestoring(true);
-      const restored = await loadSettings(code);
+      const restored = await restoreBackup(code);
       if (!restored) {
+        setBackupFailed(true);
         setBackupStatus("Kode tidak ditemukan. Periksa kembali kodenya.");
         return;
       }
-      onRestoreSettings(restored);
-      setBackupStatus("Setelan aksesibilitas berhasil dipulihkan!");
-    } catch {
+      onRestored({
+        gamification: restored.gamification,
+        materials: restored.materials,
+        progress: restored.progress,
+        settings: restored.settings,
+      });
+      setBackupFailed(false);
       setBackupStatus(
-        "Gagal memulihkan setelan. Periksa koneksi lalu coba lagi."
+        `Berhasil dipulihkan: ${restored.materials} materi & ${restored.progress} skor. Progres dan setelan aksesibilitasmu sudah kembali!`
       );
+    } catch {
+      setBackupFailed(true);
+      setBackupStatus("Gagal memulihkan data. Periksa koneksi lalu coba lagi.");
     } finally {
       setIsRestoring(false);
     }
@@ -300,17 +340,21 @@ export const ProfilView: React.FC<ProfilViewProps> = ({
         </div>
       </section>
 
-      {/* Profile Backup (cross-device via sync code) */}
-      <section className="space-y-3 rounded-2xl border-2 border-[#c7c4d8] bg-white p-4 shadow-[0_4px_0_0_#cbd5e1] sm:p-5">
+      {/* Backup data (cross-device via sync code) */}
+      <section
+        className="space-y-3 rounded-2xl border-2 border-[#c7c4d8] bg-white p-4 shadow-[0_4px_0_0_#cbd5e1] sm:p-5"
+        id="cadangan-data"
+      >
         <div className="flex items-center gap-2 font-extrabold text-[#131b2e] text-[16px]">
           <span className="material-symbols-outlined text-[#3525cd]">
             cloud_sync
           </span>
-          <span>Cadangan Profil (Lintas Perangkat)</span>
+          <span>Cadangan &amp; Pulihkan Data (Lintas Perangkat)</span>
         </div>
         <p className="font-medium text-[#464555] text-[13px] leading-relaxed">
-          Simpan setelan aksesibilitasmu dengan sebuah kode, lalu masukkan kode
-          yang sama di perangkat lain untuk memulihkannya. Tanpa perlu akun.
+          Progres dan setelanmu tersimpan di perangkat ini. Simpan semuanya
+          dengan satu kode, lalu masukkan kode yang sama di perangkat lain untuk
+          melanjutkan belajar dari titik yang sama. Tanpa perlu akun.
         </p>
 
         <label
@@ -335,7 +379,7 @@ export const ProfilView: React.FC<ProfilViewProps> = ({
             onClick={handleSave}
             type="button"
           >
-            {isSaving ? "Menyimpan…" : "Simpan Setelan"}
+            {isSaving ? "Menyimpan…" : "Simpan Data Saya"}
           </button>
           <button
             className="tactile-btn min-h-[48px] rounded-xl border-2 border-[#4f46e5] bg-white px-4 py-3 font-bold text-[#3525cd] text-[14px] shadow-[0_3px_0_0_#cbd5e1] disabled:opacity-50"
@@ -343,12 +387,19 @@ export const ProfilView: React.FC<ProfilViewProps> = ({
             onClick={handleLoad}
             type="button"
           >
-            {isRestoring ? "Memuat…" : "Pulihkan Setelan"}
+            {isRestoring ? "Memuat…" : "Pulihkan Data"}
           </button>
         </div>
 
         {backupStatus ? (
-          <div className="rounded-xl border border-[#c7c4d8] bg-[#eaedff] p-3 font-semibold text-[#131b2e] text-[12px]">
+          <div
+            className={`rounded-xl border p-3 font-semibold text-[12px] ${
+              backupFailed
+                ? "border-[#DC2626] bg-[#FEF2F2] text-[#991B1B]"
+                : "border-[#c7c4d8] bg-[#eaedff] text-[#131b2e]"
+            }`}
+            role={backupFailed ? "alert" : "status"}
+          >
             {backupStatus}
           </div>
         ) : null}

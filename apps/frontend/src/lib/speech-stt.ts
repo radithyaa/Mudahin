@@ -6,6 +6,7 @@ import {
   type UseSpeechRecognitionResult,
   useSpeechRecognition as useWebSpeechRecognition,
 } from "./speech-recognition";
+import { isLikelyTtsUnsupported } from "./speech-support";
 
 /**
  * Speech-to-Text dengan **fallback server-side**.
@@ -29,6 +30,20 @@ const TRANSCRIBE_TIMEOUT_MS = 25_000;
 
 /** Interval pengumpulan data rekaman (ms). */
 const RECORDER_TIMESLICE_MS = 250;
+
+/**
+ * Deteksi keheningan pada jalur perekam server.
+ *
+ * `MediaRecorder` tidak memberi tahu kapan pengguna berhenti bicara. Untuk
+ * memenuhi alur "tidak ada suara lagi → otomatis dikirim", kita mengamati volume
+ * mikrofon lewat Web Audio API: setelah pengguna bicara dan level suara bertahan
+ * di bawah ambang selama `SILENCE_MS`, rekaman dihentikan otomatis.
+ */
+const SILENCE_THRESHOLD = 0.02;
+const SILENCE_MS = 1800;
+const VOLUME_POLL_MS = 200;
+/** Pengguna harus sempat bicara sebelum keheningan dianggap akhir jawaban. */
+const MIN_SPEECH_MS = 700;
 
 interface RecorderLike {
   mimeType?: string;
@@ -137,6 +152,87 @@ async function transcribeOnServer(
 }
 
 /**
+ * Membuat pengamat keheningan memakai Web Audio API.
+ *
+ * Mengukur volume mikrofon secara berkala; begitu pengguna sudah sempat bicara
+ * (`MIN_SPEECH_MS`) lalu level suara bertahan di bawah `SILENCE_THRESHOLD` selama
+ * `SILENCE_MS`, `onSilence` dipanggil sekali. Bila Web Audio tidak tersedia,
+ * pengamat ini tidak melakukan apa-apa — rekaman tetap berhenti pada batas waktu
+ * maksimum.
+ *
+ * @returns penghenti yang membersihkan interval, audio context, dan node analisis.
+ */
+function createSilenceWatcher(
+  stream: MediaStream,
+  onSilence: () => void
+): { stop: () => void } {
+  const AudioCtxCtor =
+    typeof window === "undefined"
+      ? undefined
+      : (window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext);
+
+  if (!AudioCtxCtor) {
+    return { stop: () => undefined };
+  }
+
+  let context: AudioContext | null = null;
+  let interval: ReturnType<typeof globalThis.setInterval> | null = null;
+  let stopped = false;
+  const startedAt = Date.now();
+  let silenceSince: number | null = null;
+
+  try {
+    context = new AudioCtxCtor();
+    const source = context.createMediaStreamSource(stream);
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 512;
+    source.connect(analyser);
+    const samples = new Uint8Array(analyser.fftSize);
+
+    interval = globalThis.setInterval(() => {
+      if (stopped || !analyser) {
+        return;
+      }
+      analyser.getByteTimeDomainData(samples);
+      // Deviasi dari nilai tengah 128 menandakan adanya suara.
+      let peak = 0;
+      for (const sample of samples) {
+        peak = Math.max(peak, Math.abs(sample - 128) / 128);
+      }
+
+      const hasSpoken = Date.now() - startedAt >= MIN_SPEECH_MS;
+      if (peak >= SILENCE_THRESHOLD || !hasSpoken) {
+        silenceSince = null;
+        return;
+      }
+
+      const now = Date.now();
+      silenceSince ??= now;
+      if (now - silenceSince >= SILENCE_MS) {
+        stopped = true;
+        onSilence();
+      }
+    }, VOLUME_POLL_MS);
+  } catch {
+    return { stop: () => undefined };
+  }
+
+  const contextToClose = context;
+  return {
+    stop: () => {
+      stopped = true;
+      if (interval !== null) {
+        globalThis.clearInterval(interval);
+        interval = null;
+      }
+      contextToClose?.close().catch(() => undefined);
+    },
+  };
+}
+
+/**
  * Mesin rekam berbasis `MediaRecorder` untuk perangkat tanpa Web Speech API.
  *
  * Mengembalikan API yang **sama** dengan `useSpeechRecognition` sehingga
@@ -153,12 +249,16 @@ function useRecorderSpeechRecognition(): UseSpeechRecognitionResult {
   const autoStopRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(
     null
   );
+  /** Pengamat keheningan (Web Audio) yang dijalankan selama merekam. */
+  const silenceRef = useRef<{ stop: () => void } | null>(null);
 
   const cleanup = useCallback(() => {
     if (autoStopRef.current !== null) {
       globalThis.clearTimeout(autoStopRef.current);
       autoStopRef.current = null;
     }
+    silenceRef.current?.stop();
+    silenceRef.current = null;
     for (const track of streamRef.current?.getTracks() ?? []) {
       track.stop();
     }
@@ -267,6 +367,10 @@ function useRecorderSpeechRecognition(): UseSpeechRecognitionResult {
     setIsListening(true);
     recorder.start(RECORDER_TIMESLICE_MS);
 
+    // Deteksi keheningan: hentikan otomatis begitu pengguna berhenti bicara,
+    // sehingga alur "tidak ada suara lagi → kirim ke AI" bekerja di mobile juga.
+    silenceRef.current = createSilenceWatcher(stream, () => stop());
+
     autoStopRef.current = globalThis.setTimeout(
       () => stop(),
       MAX_SERVER_RECORDING_MS
@@ -299,9 +403,29 @@ function useRecorderSpeechRecognition(): UseSpeechRecognitionResult {
  * Memilih otomatis: Web Speech API (bila perangkat menyediakannya) atau mesin
  * rekam server-side. Kedua hook dijalankan (aturan hook tidak boleh kondisional)
  * tetapi yang tidak dipakai tidak pernah `start()`, jadi tidak ada efek samping.
+ *
+ * Di cangkang Tauri/WebView Android, `SpeechRecognition` kadang **ada** tetapi
+ * tidak berfungsi (mesin pengenal tidak terpasang, langsung `no-speech`/
+ * `service-not-allowed`). Kasus itu dideteksi lewat `shouldPreferServerStt`
+ * sehingga rekaman langsung dikirim ke server — inilah perbaikan "belum berfungsi
+ * di app mobile" meski server-side sudah ada.
  */
 export function useSpeechRecognition(): UseSpeechRecognitionResult {
   const web = useWebSpeechRecognition();
   const recorder = useRecorderSpeechRecognition();
+  if (shouldPreferServerStt()) {
+    return recorder;
+  }
   return web.isSupported ? web : recorder;
+}
+
+/**
+ * Apakah perangkat sebaiknya memakai rekam-lalu-kirim ke server, bukan mesin
+ * pengenal perangkat.
+ *
+ * Dipakai bersama `isLikelyTtsUnsupported`: Android WebView & cangkang Tauri
+ * sama-sama sering mengekspos `SpeechRecognition` tanpa mesin di belakangnya.
+ */
+export function shouldPreferServerStt(): boolean {
+  return isLikelyTtsUnsupported();
 }

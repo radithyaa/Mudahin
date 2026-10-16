@@ -7,6 +7,11 @@ import { soundEffects, speakText } from "../utils/audio";
 
 interface BelajarViewProps {
   currentFontSize: string;
+  /**
+   * Perangkat/pengguna baru: server menjawab tetapi pustakanya kosong.
+   * Dipakai untuk menawarkan pemulihan data, bukan sekadar kotak kosong.
+   */
+  isFreshDevice: boolean;
   isGenerating: boolean;
   missions: DailyMission[];
   modules: LearningModule[];
@@ -18,6 +23,8 @@ interface BelajarViewProps {
   onGoToLatihan: () => void;
   onOpenPractice: (module: LearningModule) => void;
   onOpenReader: (module: LearningModule) => void;
+  /** Membawa pengguna ke kartu pemulihan data di halaman Profil. */
+  onRestoreData: () => void;
   onToggleFontSize: () => void;
   onToggleRuler: () => void;
   onToggleWarm: () => void;
@@ -451,6 +458,8 @@ export const BelajarView: React.FC<BelajarViewProps> = ({
   warmActive,
   onGoToLatihan,
   readModules,
+  isFreshDevice,
+  onRestoreData,
 }) => {
   const [inputText, setInputText] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<string[]>([]);
@@ -620,6 +629,42 @@ export const BelajarView: React.FC<BelajarViewProps> = ({
           rapikan.
         </p>
       </section>
+
+      {/* Perangkat baru: tawarkan pemulihan data sebelum pengguna bingung. */}
+      {isFreshDevice ? (
+        <section className="space-y-3 rounded-3xl border-2 border-[#4f46e5] bg-[#EDE9FE] p-4 shadow-[0_4px_0_0_#3525cd] sm:p-5">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-[#4f46e5] text-white shadow-[0_2px_0_0_#3525cd]">
+              <span className="material-symbols-outlined fill-icon text-[22px]">
+                new_releases
+              </span>
+            </div>
+            <div>
+              <h2 className="font-extrabold text-[#3525cd] text-[16px] leading-tight">
+                Perangkat Ini Masih Baru
+              </h2>
+              <p className="font-medium text-[#131b2e] text-[13px] leading-snug">
+                Semua orang mulai dari nol di sini. Kalau kamu pernah memakai
+                Mudahin di perangkat lain, pulihkan datamu dengan kode cadangan.
+              </p>
+            </div>
+          </div>
+
+          <button
+            className="tactile-btn flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border-2 border-[#4f46e5] bg-white px-4 py-2.5 font-bold text-[#3525cd] text-[14px] shadow-[0_3px_0_0_#cbd5e1]"
+            onClick={() => {
+              soundEffects.playTap();
+              onRestoreData();
+            }}
+            type="button"
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              cloud_download
+            </span>
+            <span>Pulihkan Data Saya</span>
+          </button>
+        </section>
+      ) : null}
 
       {/* Daily Mission Card (Misi Seru Hari Ini) */}
       <DailyMissionCard
@@ -941,7 +986,8 @@ export const BelajarView: React.FC<BelajarViewProps> = ({
             </p>
             <p className="font-medium text-[#464555] text-[13px] leading-relaxed">
               Tulis topik atau unggah foto/PDF catatan di kotak Teman AI di
-              atas. Materi yang dihasilkan akan tersimpan di pustaka ini.
+              atas. Materi yang dihasilkan akan tersimpan di pustaka ini. Baru
+              ganti perangkat? Pulihkan datamu dari halaman Profil.
             </p>
           </div>
         ) : (

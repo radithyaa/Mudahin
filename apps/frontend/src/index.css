@@ -1,6 +1,25 @@
 @import "tailwindcss";
 
 @layer base {
+  /*
+   * Cegah gulir mendatar akibat elemen lebar (mis. bilah navigasi layar penuh).
+   * Tanpa ini, satu bilah yang sedikit lebih lebar membuat seluruh halaman bisa
+   * digeser ke samping di ponsel — gejala klasik "navbar melebihi layar".
+   */
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  #root {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    min-height: 100vh;
+  }
+
   body {
     background-color: #faf8ff;
     color: #131b2e;
