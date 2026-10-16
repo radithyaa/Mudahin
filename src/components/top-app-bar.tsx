@@ -19,8 +19,10 @@ interface TopAppBarProps {
  * judul aplikasi dan tanpa lencana khusus salah satu tab, agar navigasi terasa
  * konsisten. Logo tetap ditampilkan sebagai ikon identitas tanpa teks.
  *
- * Bilah ini **selalu selebar layar** perangkat (tanpa batas `max-w-xl`), supaya
- * latar, garis tepi, dan bayangannya tidak berhenti di tengah layar lebar.
+ * Bilah ini **selalu selebar layar** perangkat (tanpa batas `max-w-xl` dan tanpa
+ * `w-screen`, yang di WebView ber-scrollbar bisa sedikit melebihi area pandang).
+ * Gabungan `w-full` + `max-w-full` + `overflow-x-hidden` pada `html/body`
+ * memastikan bilah penuh ke tepi, namun tidak pernah memicu gulir mendatar.
  */
 export const TopAppBar: React.FC<TopAppBarProps> = ({
   xp,
@@ -43,7 +45,7 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
   };
 
   return (
-    <header className="border-[#c7c4d8] border-b-2 bg-[#faf8ff]/95 shadow-[0_4px_0_0_#c7c4d8] backdrop-blur-md">
+    <header className="w-full max-w-full shrink-0 border-[#c7c4d8] border-b-2 bg-[#faf8ff]/95 shadow-[0_4px_0_0_#c7c4d8] backdrop-blur-md">
       {/*
        * Ruang tepi kiri/kanan mengikuti area aman layar (bukan margin) supaya
        * latar bilah tetap rapat ke tepi layar, sekaligus menahan konten dari
@@ -51,7 +53,7 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
        * ponsel dirotasi mendatar. Di desktop semua nilainya 0.
        */}
       <div
-        className="flex h-16 w-full items-center justify-between gap-2 px-3 sm:px-4"
+        className="flex h-16 w-full max-w-full items-center justify-between gap-2 px-3 sm:px-4"
         style={{
           paddingLeft: "calc(0.75rem + var(--safe-left))",
           paddingRight: "calc(0.75rem + var(--safe-right))",

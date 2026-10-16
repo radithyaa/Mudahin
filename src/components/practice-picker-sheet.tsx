@@ -1,7 +1,7 @@
 import type React from "react";
 import { useEffect } from "react";
 
-import { hasSpeechSynthesis } from "../lib/speech-support";
+import { canRecordSpeech } from "../lib/speech-support";
 import type { LearningModule } from "../types";
 import { soundEffects } from "../utils/audio";
 
@@ -107,7 +107,7 @@ export const PracticePickerSheet: React.FC<PracticePickerSheetProps> = ({
     return null;
   }
 
-  const speechSupported = hasSpeechSynthesis();
+  const speechSupported = canRecordSpeech();
 
   return (
     <div className="dialog-layer dialog-layer--bottom">

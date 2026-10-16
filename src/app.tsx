@@ -14,7 +14,7 @@ import {
   type PracticeKind,
   PracticePickerSheet,
 } from "./components/practice-picker-sheet";
-import { ProfilView } from "./components/profil-view";
+import { type BackupSettings, ProfilView } from "./components/profil-view";
 import { QuizModal } from "./components/quiz-modal";
 import { ReadingGuideOverlay } from "./components/reading-guide-overlay";
 import { TopAppBar } from "./components/top-app-bar";
@@ -26,9 +26,14 @@ import { useCreateMaterial } from "./lib/hooks/use-create-material";
 import { useMaterials } from "./lib/hooks/use-materials";
 import { usePersistentState } from "./lib/hooks/use-persistent-state";
 import {
+  useGamification,
   useProgressSummary,
   useRecordProgress,
 } from "./lib/hooks/use-progress";
+import { useGamificationStore } from "./lib/stores/gamification-store";
+import { useProgressStore } from "./lib/stores/progress-store";
+import { useVoiceAttemptsStore } from "./lib/stores/voice-history-store";
+import { queryClient } from "./lib/trpc";
 import type { DailyMission, LearningModule } from "./types";
 import { soundEffects, stopSpeech } from "./utils/audio";
 
@@ -80,7 +85,13 @@ const markMissionDone = (
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>("belajar");
-  const [xp, setXp] = useState(0);
+  /**
+   * XP & rentetan kini hidup di store persisten (bukan `useState`) agar tidak
+   * hilang saat reload dan ikut tercadangkan antar perangkat. `useGamification`
+   * menyinkronkannya dengan server.
+   */
+  const xp = useGamificationStore((state) => state.xp);
+  const streakDays = useGamificationStore((state) => state.streakDays);
   const [missions, setMissions] = useState<DailyMission[]>(INITIAL_MISSIONS);
 
   // Pustaka materi dari backend (`materials.list`) — hanya milik pengguna ini.
@@ -90,6 +101,8 @@ export default function App() {
   const materialsReady = !(materialsLoading || materialsError);
   const progressSummary = useProgressSummary();
   const recordProgress = useRecordProgress();
+  const gamification = useGamification();
+  const awardXp = gamification.reward;
   const materials = useMemo(
     () =>
       withProgressScores(
@@ -136,6 +149,8 @@ export default function App() {
     useState<LearningModule | null>(null);
   const [activeVoiceModule, setActiveVoiceModule] =
     useState<LearningModule | null>(null);
+  /** True bila modal suara yang terbuka adalah mode ulangan (tanpa XP). */
+  const [isVoiceReplay, setIsVoiceReplay] = useState(false);
   const [activeNarrationModule, setActiveNarrationModule] =
     useState<LearningModule | null>(null);
   /** Materi yang sedang dipilih pada dialog "Pilih Jenis Latihan". */
@@ -170,12 +185,12 @@ export default function App() {
 
   const gainXp = useCallback(
     (amount: number, reason?: string) => {
-      setXp((prev) => prev + amount);
+      awardXp(amount);
       if (reason) {
         showToast(`+${amount} XP! ${reason}`);
       }
     },
-    [showToast]
+    [awardXp, showToast]
   );
 
   // Selesai membaca di Focus Reader → tandai misi bacaan.
@@ -200,13 +215,10 @@ export default function App() {
       const score = total > 0 ? Math.round((correct / total) * 100) : 0;
       gainXp(40, "Kuis adaptif selesai");
       setMissions((prev) => markMissionDone(prev, "quiz"));
-      recordProgress.mutate(
-        { materialId: moduleId, score },
-        {
-          onError: () =>
-            showToast(`Skor ${score}% tersimpan lokal (server offline).`),
-        }
-      );
+      recordProgress.mutate(moduleId, score, {
+        onError: () =>
+          showToast(`Skor ${score}% tersimpan lokal (server offline).`),
+      });
     },
     [gainXp, recordProgress, showToast]
   );
@@ -215,6 +227,50 @@ export default function App() {
   const handleClaimDailyBonus = () => {
     gainXp(50, "Bonus Misi Harian Berhasil Diklaim");
   };
+
+  /**
+   * Menerapkan hasil pemulihan data lintas perangkat (dipanggil `ProfilView`).
+   *
+   * Server sudah menulis data yang dipulihkan (`backup.load` + `data.import`),
+   * jadi di sini cukup: samakan setelan lokal dengan snapshot, lalu paksa
+   * semua kueri mengambil ulang pustaka & progres yang baru.
+   */
+  const handleRestored = useCallback(
+    (info: {
+      gamification: {
+        xp: number;
+        lastActiveDate: string | null;
+        streakDays: number;
+      };
+      materials: number;
+      progress: number;
+      settings: BackupSettings;
+    }) => {
+      setFontSize(info.settings.fontSize);
+      setReadingRuler(info.settings.readingRuler);
+      setWarmTheme(info.settings.warmTheme);
+      setDyslexiaFont(info.settings.dyslexiaFont);
+      setSpeechSpeed(info.settings.speechSpeed);
+      // XP & rentetan yang dipulihkan menggantikan nilai lokal (ambil terbaik).
+      useGamificationStore.getState().syncFrom(info.gamification);
+      // Cache lokal yang sudah usang dibuang agar "Sudah Dibaca" tidak liar.
+      useProgressStore.getState().reset();
+      useVoiceAttemptsStore.getState().reset();
+      setReadModules([]);
+      queryClient.invalidateQueries().catch(() => undefined);
+      showToast(
+        `Data dipulihkan: ${info.materials} materi & ${info.progress} skor.`
+      );
+    },
+    [
+      setDyslexiaFont,
+      setFontSize,
+      setReadingRuler,
+      setSpeechSpeed,
+      setWarmTheme,
+      showToast,
+    ]
+  );
 
   /**
    * Membuka modal latihan sesuai jenis yang dipilih di dialog.
@@ -230,6 +286,7 @@ export default function App() {
           setActiveFlashcardModule(module);
           break;
         case "voice":
+          setIsVoiceReplay(false);
           setActiveVoiceModule(module);
           break;
         case "narration":
@@ -247,6 +304,17 @@ export default function App() {
     },
     []
   );
+
+  /**
+   * Mengulang latihan lisan dari Riwayat Latihan.
+   *
+   * Dinilai & dicatat kembali, tetapi **tanpa XP** — ini murni untuk mengulang
+   * pemahaman, sesuai permintaan "dapat mengulanginya tapi tidak memberi exp".
+   */
+  const handleReplayVoice = useCallback((module: LearningModule) => {
+    setIsVoiceReplay(true);
+    setActiveVoiceModule(module);
+  }, []);
 
   const handleCycleFontSize = () => {
     const next: Record<FontSize, FontSize> = {
@@ -390,7 +458,7 @@ export default function App() {
 
   return (
     <div
-      className={`flex min-h-screen flex-col items-center bg-[#faf8ff] text-[#131b2e] selection:bg-[#dad7ff] selection:text-[#3525cd] ${
+      className={`flex min-h-screen w-full max-w-full flex-col items-center overflow-x-hidden bg-[#faf8ff] text-[#131b2e] selection:bg-[#dad7ff] selection:text-[#3525cd] ${
         warmTheme ? "theme-warm" : ""
       } ${dyslexiaFont ? "font-dyslexia" : ""}`}
     >
@@ -408,12 +476,12 @@ export default function App() {
       <TopAppBar
         onOpenAccessibility={() => setIsA11ySheetOpen(true)}
         onOpenProfile={() => setActiveTab("profil")}
-        streakDays={progressSummary.data?.quizzedCount ?? 0}
+        streakDays={streakDays}
         xp={xp}
       />
 
       <div
-        className="flex w-full flex-1 flex-col"
+        className="flex w-full max-w-full flex-1 flex-col"
         style={{
           paddingBottom: "calc(var(--navbar-height) + var(--safe-bottom))",
           paddingLeft: "var(--safe-left)",
@@ -438,6 +506,7 @@ export default function App() {
         {materialsReady && activeTab === "belajar" ? (
           <BelajarView
             currentFontSize={fontSize}
+            isFreshDevice={materialsQuery.isFreshDevice}
             isGenerating={isGenerating}
             missions={missions}
             modules={materials}
@@ -445,6 +514,12 @@ export default function App() {
             onGoToLatihan={() => setActiveTab("latihan")}
             onOpenPractice={(mod) => setPracticePickerModule(mod)}
             onOpenReader={(mod) => setActiveReaderModule(mod)}
+            onRestoreData={() => {
+              setActiveTab("profil");
+              showToast(
+                "Masukkan kode cadanganmu di kartu 'Cadangan & Pulihkan Data'."
+              );
+            }}
             onToggleFontSize={handleCycleFontSize}
             onToggleRuler={() => {
               setReadingRuler(!readingRuler);
@@ -466,12 +541,20 @@ export default function App() {
 
         {materialsReady && activeTab === "latihan" ? (
           <LatihanView
+            isFreshDevice={materialsQuery.isFreshDevice}
             modules={materials}
             onOpenAiStudioPrompt={() => {
               setActiveTab("belajar");
               showToast("Tulis topik atau unggah catatan di kotak Teman AI!");
             }}
             onOpenPractice={(mod) => setPracticePickerModule(mod)}
+            onOpenRestore={() => {
+              setActiveTab("profil");
+              showToast(
+                "Masukkan kode cadanganmu di kartu 'Cadangan & Pulihkan Data'."
+              );
+            }}
+            onReplayVoice={handleReplayVoice}
           />
         ) : null}
 
@@ -495,13 +578,7 @@ export default function App() {
             canClaimBonus={allMissionsCompleted}
             completedMissions={missions.filter((m) => m.completed).length}
             onClaimDailyBonus={handleClaimDailyBonus}
-            onRestoreSettings={(restored) => {
-              setFontSize(restored.fontSize);
-              setReadingRuler(restored.readingRuler);
-              setWarmTheme(restored.warmTheme);
-              setDyslexiaFont(restored.dyslexiaFont);
-              setSpeechSpeed(restored.speechSpeed);
-            }}
+            onRestored={handleRestored}
             progress={progressSummary.data}
             settings={{
               fontSize,
@@ -510,7 +587,7 @@ export default function App() {
               dyslexiaFont,
               speechSpeed,
             }}
-            streakDays={Math.max(0, progressSummary.data?.quizzedCount ?? 0)}
+            streakDays={streakDays}
             xp={xp}
           />
         )}
@@ -578,10 +655,16 @@ export default function App() {
       {activeVoiceModule ? (
         <VoicePracticeModal
           module={activeVoiceModule}
-          onClose={() => setActiveVoiceModule(null)}
-          onComplete={(xpGained) =>
-            gainXp(xpGained, "Latihan suara lisan tuntas")
-          }
+          onClose={() => {
+            setActiveVoiceModule(null);
+            setIsVoiceReplay(false);
+          }}
+          onComplete={(xpGained) => {
+            if (xpGained > 0) {
+              gainXp(xpGained, "Latihan suara lisan tuntas");
+            }
+          }}
+          replay={isVoiceReplay}
         />
       ) : null}
 

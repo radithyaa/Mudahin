@@ -70,6 +70,28 @@ export function canSpeakText(): boolean {
   return typeof window !== "undefined" && typeof window.Audio === "function";
 }
 
+/**
+ * Apakah perekaman suara dapat dipakai (dasar latihan "Jawab dengan Suara").
+ *
+ * Latihan lisan membutuhkan **mikrofon**, bukan mesin suara: Web Speech API bila
+ * ada, atau `MediaRecorder` untuk jalur server-side. Karena itu pemeriksaannya
+ * terpisah dari `canSpeakText` — dulu tombol lisan keliru dinonaktifkan di mobile
+ * hanya karena `speechSynthesis` tidak tersedia.
+ */
+export function canRecordSpeech(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const hasRecognition =
+    "SpeechRecognition" in window || "webkitSpeechRecognition" in window;
+  const hasRecorder =
+    "MediaRecorder" in window &&
+    typeof navigator.mediaDevices?.getUserMedia === "function";
+
+  return hasRecognition || hasRecorder;
+}
+
 /** Pesan ramah saat pembacaan suara tidak tersedia di perangkat pengguna. */
 export const TTS_UNAVAILABLE_MESSAGE =
   "Pembacaan suara belum tersedia di perangkat ini. Di Android, pasang “Speech Recognition & Synthesis” (Google) lalu buka kembali aplikasi; di peramban desktop fitur ini langsung aktif.";

@@ -9,3 +9,8 @@ coverage/
 # Env publik build (hanya VITE_* non-rahasia) — ikut di-commit agar APK
 # terhubung ke server produksi.
 !.env.production
+
+# Output build Rust Tauri (desktop/Android). Bisa berukuran GB; dikecualikan
+# agar Alchemy/tool lain tidak menelusuri direktori ini saat deploy/hash.
+src-tauri/target/
+src-tauri/gen/android/app/build/

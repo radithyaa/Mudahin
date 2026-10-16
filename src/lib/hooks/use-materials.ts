@@ -4,6 +4,7 @@ import { useEffect } from "react";
 
 import { toLearningModules } from "../api/materials";
 import { cacheMaterials, readCachedMaterials } from "../materials/cache";
+import { useDeviceIdentity } from "../stores/device-identity-store";
 import { trpc } from "../trpc";
 
 /**
@@ -26,8 +27,19 @@ export function useMaterials(): {
   isError: boolean;
   isPending: boolean;
   source: "server" | "offline" | "empty";
+  /**
+   * Penanda perangkat baru: server sudah menjawab, tetapi pustakanya kosong dan
+   * belum ada salinan luring — inilah saat pengguna perlu ditawari memulihkan
+   * data dari kode cadangan, bukan bingung karena pustaka "hilang".
+   */
+  isFreshDevice: boolean;
 } {
-  const materialsQuery = useQuery(trpc.materials.list.queryOptions());
+  const deviceId = useDeviceIdentity((state) => state.deviceId);
+  const materialsQuery = useQuery(
+    // `deviceId` selalu terisi (dibaca sinkron dari `lib/offline/device-identity`),
+    // jadi kueri boleh langsung berjalan di render pertama.
+    trpc.materials.list.queryOptions({ deviceId })
+  );
   const cached = useQuery({
     queryFn: readCachedMaterials,
     queryKey: ["offline-materials"],
@@ -54,6 +66,7 @@ export function useMaterials(): {
       isError: false,
       isPending: false,
       source: "server",
+      isFreshDevice: serverMaterials.length === 0,
     };
   }
 
@@ -65,6 +78,7 @@ export function useMaterials(): {
       isError: false,
       isPending: materialsQuery.isPending,
       source: "offline",
+      isFreshDevice: false,
     };
   }
 
@@ -75,5 +89,6 @@ export function useMaterials(): {
     isError: materialsQuery.isError,
     isPending: materialsQuery.isPending,
     source: "empty",
+    isFreshDevice: false,
   };
 }
