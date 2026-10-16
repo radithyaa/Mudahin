@@ -1,7 +1,8 @@
 import {
   combineSpeechResults,
   matchOptionIndex,
-} from "../apps/web/src/routes/materi/hooks/use-speech-recognition";
+} from "../apps/frontend/src/lib/speech-recognition";
+import { shouldPreferServerStt } from "../apps/frontend/src/lib/speech-stt";
 
 let pass = 0;
 let fail = 0;
@@ -116,6 +117,10 @@ const mkEvent = (
     second.transcript === "jawaban nya b"
   );
 }
+
+// --- Pilihan jalur STT (perangkat vs server) ---------------------------------
+// Di luar peramban (Bun), tidak ada UA Android → mesin perangkat dipilih.
+check("tanpa UA Android: tidak memaksa jalur server", !shouldPreferServerStt());
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

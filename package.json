@@ -31,17 +31,20 @@
     "build": "turbo run build",
     "check": "ultracite check",
     "check-types": "turbo run check-types",
-    "db:generate": "turbo run db:generate -F @mudahin/db --",
+    "db:generate": "turbo run db:generate -F @mudahin/db --ui=stream",
+    "db:generate:direct": "bun run --cwd packages/db db:generate",
+    "db:migrate:deploy": "turbo run db:migrate:deploy -F @mudahin/db",
     "deploy": "turbo run deploy -F @mudahin/infra --",
     "destroy": "turbo run destroy -F @mudahin/infra --",
     "dev": "turbo run dev",
+    "dev:frontend": "turbo run dev:bare -F frontend --",
     "dev:stack": "turbo run dev -F @mudahin/infra --",
-    "dev:web": "turbo run dev:bare -F web --",
-    "env:generate": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
+    "dev:web": "turbo run dev:bare -F frontend --",
+    "env:generate": "varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
     "fix": "ultracite fix",
-    "postinstall": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
+    "postinstall": "varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
     "prewarm": "bun run scripts/prewarm.ts",
-    "verify": "bun run scripts/verify-request-guard.ts && bun run scripts/verify-stt.ts && bun run scripts/verify-offline.ts && bun run scripts/verify-frontend.ts && bun run scripts/verify-ai.ts"
+    "verify": "bun run scripts/verify-request-guard.ts && bun run scripts/verify-stt.ts && bun run scripts/verify-tts.ts && bun run scripts/verify-speech.ts && bun run scripts/verify-voice.ts && bun run scripts/verify-offline.ts && bun run scripts/verify-device-identity.ts && bun run scripts/verify-device-identity-runtime.ts && bun run scripts/verify-data-import.ts && bun run scripts/verify-materials-db.ts && bun run scripts/verify-frontend.ts && bun run scripts/verify-ai.ts"
   },
   "dependencies": {
     "zod": "catalog:"

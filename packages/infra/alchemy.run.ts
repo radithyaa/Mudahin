@@ -34,6 +34,12 @@ export const server = Cloudflare.Worker("server", {
       "https://api.deepseek.com"
     ),
     DEEPSEEK_MODEL: optionalString("DEEPSEEK_MODEL", "deepseek-chat"),
+    GEMINI_API_KEY: optionalString("GEMINI_API_KEY"),
+    GEMINI_BASE_URL: optionalString(
+      "GEMINI_BASE_URL",
+      "https://generativelanguage.googleapis.com/v1beta/openai"
+    ),
+    GEMINI_MODEL: optionalString("GEMINI_MODEL", "gemini-2.5-flash"),
     PREWARM_TOKEN: optionalString("PREWARM_TOKEN"),
   },
   dev: {
@@ -52,16 +58,26 @@ export default Alchemy.Stack(
   Effect.gen(function* () {
     const serverWorker = yield* server;
     const webWorker = yield* Cloudflare.Website.Vite("web", {
-      rootDir: "../../apps/web",
+      rootDir: "../../apps/frontend",
       assets: {
         htmlHandling: "auto-trailing-slash",
         notFoundHandling: "single-page-application",
+      },
+      // Persempit cakupan hash rebuild (memo) agar Alchemy tidak menelusuri
+      // direktori non-sumber berukuran besar di dalam `apps/frontend`.
+      // Khususnya `src-tauri/target/` (output build Rust, bisa ber-GB) yang
+      // memicu ENOENT: berkas `.rmeta` sementara hilang saat cargo menulis.
+      // `lockfile: true` wajib karena menyetel `memo` mematikan lockfile
+      // dari hash secara bawaan (lihat docs alchemy ViteOptions).
+      memo: {
+        exclude: ["src-tauri/**", "node_modules/**", "dist/**", ".turbo/**"],
+        lockfile: true,
       },
       env: {
         VITE_SERVER_URL: serverWorker.url.as<string>(),
       },
       dev: {
-        port: 3001,
+        port: 3002,
       },
     });
 

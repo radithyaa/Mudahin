@@ -10,7 +10,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 
 import { createContext } from "./context";
-import { desktopOrigins, ENV } from "./env.server";
+import { corsOrigins } from "./env.server";
 import { handlePrewarm } from "./jobs/prewarm";
 import { createAuth } from "./services";
 
@@ -37,7 +37,7 @@ app.use("*", async (c, next) => {
 app.use(
   "/*",
   cors({
-    origin: [ENV.CORS_ORIGIN, ...desktopOrigins],
+    origin: corsOrigins(),
     allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,

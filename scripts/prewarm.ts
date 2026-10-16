@@ -2,9 +2,9 @@
 /**
  * Pra-panaskan cache AI untuk demo (Rundown Hari 2, tugas 2.10).
  *
- * Memanggil endpoint `/jobs/prewarm` di server sehingga "Sederhanakan" dan
- * "Buat Kuis" untuk semua materi demo tersimpan di cache D1 — demo tetap
- * cepat walau jaringan ruangan buruk.
+ * Memanggil endpoint `/jobs/prewarm` di server sehingga "Sederhanakan",
+ * "Buat Kuis", dan "Kartu Belajar" untuk semua materi pengguna tersimpan di
+ * cache D1 — demo tetap cepat walau jaringan ruangan buruk.
  *
  * Pemakaian:
  *   SERVER_URL=http://localhost:3000 PREWARM_TOKEN=rahasia bun run prewarm

@@ -8,7 +8,8 @@
   "scripts": {
     "check-types": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:deploy": "drizzle-kit migrate"
+    "db:generate:direct": "drizzle-kit generate",
+    "db:migrate:deploy": "bun run scripts/migrate-deploy.ts"
   },
   "dependencies": {
     "@libsql/client": "0.18.0",

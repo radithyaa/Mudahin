@@ -1,12 +1,21 @@
 import { TRPCError } from "@trpc/server";
 
-import { chatJson, type DeepSeekConfig, DeepSeekError } from "../ai";
+import {
+  AiError,
+  chatJson,
+  chatJsonVision,
+  type DeepSeekConfig,
+  GEMINI_DEFAULT_BASE_URL,
+  GEMINI_DEFAULT_MODEL,
+  type GeminiConfig,
+} from "../ai";
 import { hashKey, readCache, writeCache } from "../cache";
 import { publicProcedure, router } from "../index";
 import {
   buildExplainMessages,
   buildFlashcardMessages,
   buildMindMapMessages,
+  buildOcrFlashcardMessages,
   buildQuizMessages,
   buildSimplifyMessages,
 } from "../prompts";
@@ -19,6 +28,9 @@ import {
   type MindMap,
   type MindMapBranch,
   mindMapSchema,
+  type OcrFlashcardResult,
+  ocrFlashcardResultSchema,
+  ocrToFlashcardsInputSchema,
   PROMPT_VERSION,
   type QuizQuestion,
   type QuizResult,
@@ -26,6 +38,7 @@ import {
   rawExplainResponseSchema,
   rawFlashcardResponseSchema,
   rawMindMapResponseSchema,
+  rawOcrFlashcardResponseSchema,
   rawQuizResponseSchema,
   rawSimplifyResponseSchema,
   type SimplifyResult,
@@ -50,6 +63,20 @@ function deepSeekConfig(ctx: ApiContext): DeepSeekConfig {
     apiKey: env.DEEPSEEK_API_KEY ?? "",
     baseUrl: env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com",
     model: env.DEEPSEEK_MODEL ?? "deepseek-chat",
+  };
+}
+
+/**
+ * Konfigurasi Gemini — dipakai khusus oleh `ocrToFlashcards` (Future F3).
+ * Base URL default adalah endpoint OpenAI-compatible Gemini, sehingga klien
+ * HTTP di `ai.ts` bisa dipakai bersama DeepSeek.
+ */
+function geminiConfig(ctx: ApiContext): GeminiConfig {
+  const { env } = ctx;
+  return {
+    apiKey: env.GEMINI_API_KEY ?? "",
+    baseUrl: env.GEMINI_BASE_URL ?? GEMINI_DEFAULT_BASE_URL,
+    model: env.GEMINI_MODEL ?? GEMINI_DEFAULT_MODEL,
   };
 }
 
@@ -267,6 +294,51 @@ export const aiRouter = router({
       });
       return result;
     }),
+
+  /**
+   * Future F3: foto catatan tulisan tangan → teks (OCR) → dek kartu belajar.
+   * Memakai **Gemini** (vision) alih-alih DeepSeek, karena Gemini unggul
+   * membaca teks pada gambar. Klien mengirim gambar sebagai data URL base64.
+   */
+  ocrToFlashcards: publicProcedure
+    .input(ocrToFlashcardsInputSchema)
+    .mutation(async ({ ctx, input, signal }): Promise<OcrFlashcardResult> => {
+      // Hash memakai ukuran + awalan data URL, bukan seluruh base64, agar
+      // key tetap pendek dan stabil tanpa membuang waktu hashing MB data.
+      const imageFingerprint = `${input.imageDataUrl.slice(0, 64)}|${input.imageDataUrl.length}`;
+      const key = await hashKey(
+        "ocr-flashcards",
+        PROMPT_VERSION,
+        JSON.stringify({
+          imageFingerprint,
+          profile: input.profile,
+          hint: input.hint,
+        })
+      );
+
+      const cached = await readCache<OcrFlashcardResult>(ctx.db, key);
+      if (cached) {
+        return { ...cached, cached: true };
+      }
+
+      const raw = await callAi(
+        () =>
+          chatJsonVision({
+            config: geminiConfig(ctx),
+            messages: buildOcrFlashcardMessages(input),
+            signal,
+          }),
+        "Gagal membaca tulisan pada gambar"
+      );
+
+      const result = normalizeOcrFlashcards(raw);
+      await writeCache(ctx.db, key, "ocr-flashcards", {
+        deckTitle: result.deckTitle,
+        cards: result.cards,
+        extractedText: result.extractedText,
+      });
+      return result;
+    }),
 });
 
 /** Menormalkan respons flashcard mentah menjadi dek yang valid (FR-LEA-04). */
@@ -279,8 +351,47 @@ function normalizeFlashcards(raw: unknown): FlashcardDeck {
     });
   }
 
-  const deckTitle = parsed.data.deckTitle.trim() || "Kartu Belajar";
-  const cards = parsed.data.cards
+  return buildDeck(parsed.data.deckTitle, parsed.data.cards);
+}
+
+/** Menormalkan respons OCR mentah (teks + kartu) menjadi hasil yang valid (F3). */
+function normalizeOcrFlashcards(raw: unknown): OcrFlashcardResult {
+  const parsed = rawOcrFlashcardResponseSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new TRPCError({
+      code: "BAD_GATEWAY",
+      message: "Format hasil pembacaan gambar tidak sesuai.",
+    });
+  }
+
+  const extractedText = parsed.data.extractedText.trim();
+  const cards = parsed.data.cards.filter(
+    (card) => card.term.trim() && card.definition.trim()
+  );
+
+  if (!extractedText && cards.length === 0) {
+    throw new TRPCError({
+      code: "UNPROCESSABLE_CONTENT",
+      message:
+        "Tulisan pada gambar tidak terbaca. Coba foto ulang dengan pencahayaan lebih terang.",
+    });
+  }
+
+  const deck = buildDeck(parsed.data.deckTitle, parsed.data.cards);
+  return ocrFlashcardResultSchema.parse({
+    ...deck,
+    extractedText,
+    cached: false,
+  });
+}
+
+/** Membangun dek kartu ternormalisasi dari judul + kartu mentah. */
+function buildDeck(
+  rawTitle: string,
+  rawCards: { term: string; definition: string }[]
+): FlashcardDeck {
+  const deckTitle = rawTitle.trim() || "Kartu Belajar";
+  const cards = rawCards
     .map((card, index): Flashcard | null => {
       const term = card.term.trim();
       const definition = card.definition.trim();
@@ -353,11 +464,12 @@ async function callAi<T>(
   try {
     return await run();
   } catch (error) {
-    if (error instanceof DeepSeekError && error.kind === "disabled") {
+    if (error instanceof AiError && error.kind === "disabled") {
+      const which = error.provider === "gemini" ? "Gemini" : "DeepSeek";
       // biome-ignore lint/style/useErrorCause: TRPCError menerima `cause` di opsi objeknya; rule belum mengenali kelas ini.
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
-        message: "Fitur AI belum dikonfigurasi di server.",
+        message: `Fitur AI (${which}) belum dikonfigurasi di server.`,
         cause: error,
       });
     }

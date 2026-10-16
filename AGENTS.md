@@ -4,7 +4,17 @@ This project uses **Ultracite**, a zero-config preset that enforces strict code 
 
 ## Frontend Architecture
 
-Frontend (`apps/web`) uses a **vertical slice architecture**: each feature lives in its own `src/routes/<feature>/` folder containing its own components, hooks, and lib. Read [`apps/web/ARCHITECTURE.md`](apps/web/ARCHITECTURE.md) before adding pages or features.
+The frontend lives in [`apps/frontend/`](apps/frontend/) — a single mobile-first screen with four tabs (Belajar, Latihan, Akses, Profil), built with React 19 + Vite + Tailwind v4 and packaged as a PWA and Tauri v2 app (`apps/frontend/src-tauri`). It talks to the backend through the tRPC client in `apps/frontend/src/lib/trpc.ts`, with contract adapters in `apps/frontend/src/lib/api/` and React Query hooks in `apps/frontend/src/lib/hooks/`. Never call AI providers directly from this client — all AI goes through `ai.*` tRPC procedures.
+
+**There are no user accounts.** All learner data (accessibility settings, material library, quiz scores, XP/streak, voice-practice history) lives locally on the device and is keyed server-side by a random per-device `deviceId`. Every device therefore starts from zero; the only way to continue elsewhere is the cross-device backup code on the Profil tab (`backup.save`/`backup.load` + `data.export`/`data.import`, driven by `apps/frontend/src/lib/hooks/use-device-backup.ts`). Keep new persisted state inside that backup snapshot (`packages/api/src/backup.ts`) so nothing is silently left behind on restore.
+
+**Gamification & voice history** persist server-side in `gamification_state` (`progress.reward` / `progress.gamification`) and `voice_attempts` (`progress.recordVoiceAttempt` / `progress.voiceHistory`), mirrored locally by `apps/frontend/src/lib/stores/gamification-store.ts`. XP and the daily streak must never move backwards — merging/restoring takes the maximum (`mergeGamification`). Voice answers are graded deterministically by keyword match in `packages/api/src/voice.ts` (no AI call, so it costs no quota and works offline); a correct answer awards XP like any other practice, while replaying from Riwayat Latihan records the attempt but gives **no** XP.
+
+**Speech fallback.** TTS/STT prefer the device Web Speech API but fall back to the server (`speech.synthesize`/`speech.transcribe` via Gemini) when the platform lacks it or its engine is silent. `shouldPreferServerStt` (in `apps/frontend/src/lib/speech-stt.ts`) forces the recorder path on Android WebView/Tauri shells, where `SpeechRecognition` can exist yet never return results. Gate voice buttons with `canRecordSpeech` (microphone), **not** `canSpeakText`/`hasSpeechSynthesis` — they are different capabilities.
+
+**Device identity rules.** `apps/frontend/src/lib/offline/device-identity.ts` is the single source for `deviceId`. It resolves **synchronously** from `localStorage`, never throws, and guarantees a value ≥4 chars (matching `deviceIdSchema`). Do **not** move it into Zustand `persist`: that middleware calls `window.localStorage` at store-creation time and disables persistence permanently if the access throws, which leaves `deviceId` empty and every device query pending forever. Because it always returns a value, query `enabled`-gates on `deviceId` are unnecessary — start queries on first render.
+
+UI components live in `apps/frontend/src/components/`; **non-UI features** (offline IndexedDB, materials cache, Zustand stores, haptics, motion, TTS/STT, shared hooks) live in `apps/frontend/src/lib/`. Keep UI thin and put reusable logic in `lib/`. The backend lives in `apps/server` (Hono + tRPC) with shared contracts in `packages/api`.
 
 ## Quick Reference
 

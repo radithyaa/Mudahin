@@ -18,15 +18,21 @@ export const aiCache = sqliteTable("ai_cache", {
 });
 
 /**
- * Cadangan profil aksesibilitas (sinkronisasi lintas perangkat, tingkat MVP).
+ * Cadangan perangkat — snapshot luring penuh yang dipulihkan lewat kode.
  *
- * `id` = kode cadangan (`syncId`) yang dibuat acak di perangkat. Tidak ada
- * akun/role — pemulihan dilakukan dengan memasukkan kode di perangkat lain.
+ * Berbeda dengan `profileBackup` (hanya setelan aksesibilitas), tabel ini
+ * menyimpan **seluruh** data lokal: setelan, pustaka materi, dan progres skor.
+ * Bentuk payload mengikuti `backupSnapshotSchema` di `packages/api/src/backup.ts`,
+ * yang juga menjadi batas ukuran payload (anti-lonjakan biaya/kuota).
  */
-export const profileBackup = sqliteTable("profile_backup", {
+export const deviceBackup = sqliteTable("device_backup", {
+  /** Kode cadangan (`syncId`) — divalidasi minimal 4 karakter di kontrak API. */
   id: text("id").primaryKey(),
-  /** Snapshot preferensi (JSON) — lihat `profileSnapshotSchema` di packages/api. */
+  /** Snapshot perangkat (JSON) — lihat `backupSnapshotSchema`. */
   payload: text("payload").notNull(),
+  /** Jumlah entri, hanya untuk inspeksi cepat & diagnostik. */
+  materialCount: integer("material_count").notNull().default(0),
+  progressCount: integer("progress_count").notNull().default(0),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .$defaultFn(() => new Date())
     .notNull(),
@@ -50,6 +56,58 @@ export const learningProgress = sqliteTable("learning_progress", {
   quizCount: integer("quiz_count").notNull().default(0),
   /** Waktu (ISO-8601) aktivitas terakhir. */
   lastActivityAt: text("last_activity_at").notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+/**
+ * Riwayat latihan lisan (FR-AUD-04 lanjutan).
+ *
+ * Setiap percobaan "Jawab dengan Suara" dicatat lengkap: pertanyaan, transkrip
+ * yang terdengar, dan putusan benar/salah dari AI. Riwayat ini dipakai untuk
+ * halaman **Riwayat Latihan** sehingga pengguna dapat melihat apa yang pernah
+ * ia jawab dan mengulanginya. Kepemilikan mengikuti `user_id` (deviceId tanpa
+ * akun), sama seperti `learning_progress`.
+ */
+export const voiceAttempts = sqliteTable("voice_attempts", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().default("anon"),
+  materialId: text("material_id").notNull(),
+  materialTitle: text("material_title").notNull(),
+  /** Pertanyaan yang diajukan ke pengguna. */
+  question: text("question").notNull(),
+  /** Transkrip jawaban lisan pengguna (bisa kosong bila tak ada suara). */
+  transcript: text("transcript").notNull(),
+  /** Putusan AI: 1 benar, 0 belum tepat. */
+  correct: integer("correct", { mode: "boolean" }).notNull(),
+  /** Umpan balik ramah yang ditampilkan ke pengguna. */
+  feedback: text("feedback").notNull(),
+  /** Bila percobaan ini **tidak** memberi XP (mis. mode ulangan riwayat). */
+  replay: integer("replay", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+/**
+ * Ringkasan gamifikasi per perangkat (XP & rentetan harian).
+ *
+ * XP sebelumnya hanya hidup di memori (`useState` di `app.tsx`) sehingga hilang
+ * setiap reload dan tidak ikut tercadangkan. Tabel ini menyimpannya agar XP dan
+ * **progres harian** (tanggal aktivitas terakhir + rentetan) bertahan lintas sesi
+ * dan lintas perangkat lewat kode cadangan.
+ */
+export const gamificationState = sqliteTable("gamification_state", {
+  /** Kunci = userId (deviceId tanpa akun). */
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().default("anon"),
+  /** Total poin pengalaman belajar. */
+  xp: integer("xp").notNull().default(0),
+  /** Tanggal (YYYY-MM-DD) aktivitas terakhir — dasar perhitungan rentetan. */
+  lastActiveDate: text("last_active_date"),
+  /** Jumlah hari berturut-turut belajar. */
+  streakDays: integer("streak_days").notNull().default(0),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .$defaultFn(() => new Date())
     .notNull(),

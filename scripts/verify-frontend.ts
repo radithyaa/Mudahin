@@ -1,8 +1,5 @@
-import {
-  tokenizeWords,
-  wordIndexFromChar,
-} from "../apps/web/src/routes/materi/hooks/use-text-to-speech";
-import { scoreOf } from "../apps/web/src/routes/materi/stores/quiz-store";
+import { scoreOf } from "../apps/frontend/src/lib/stores/quiz-store";
+import { tokenizeWords, wordIndexFromChar } from "../apps/frontend/src/lib/tts";
 
 let pass = 0;
 let fail = 0;

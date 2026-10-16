@@ -2,14 +2,18 @@ import { hashKey } from "../packages/api/src/cache";
 import {
   buildExplainMessages,
   buildMindMapMessages,
+  buildOcrFlashcardMessages,
   buildQuizMessages,
   buildSimplifyMessages,
 } from "../packages/api/src/prompts";
 import {
   explainInputSchema,
+  ocrFlashcardResultSchema,
+  ocrToFlashcardsInputSchema,
   quizInputSchema,
   rawExplainResponseSchema,
   rawMindMapResponseSchema,
+  rawOcrFlashcardResponseSchema,
   rawQuizResponseSchema,
   rawSimplifyResponseSchema,
   simplifyInputSchema,
@@ -136,6 +140,65 @@ check(
 );
 const mm = buildMindMapMessages({ text: "Fotosintesis", level: "sederhana" });
 check("mindmap prompt mentions branches", mm[1].content.includes("branches"));
+
+// OCR tulisan tangan → flashcards (Future F3, Gemini vision)
+const PNG_DATA_URL =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC";
+check(
+  "ocr input accepts data url",
+  ocrToFlashcardsInputSchema.safeParse({ imageDataUrl: PNG_DATA_URL }).success
+);
+check(
+  "ocr input rejects non-image data url",
+  !ocrToFlashcardsInputSchema.safeParse({
+    imageDataUrl: "data:text/plain;base64,aGVsbG8=",
+  }).success
+);
+check(
+  "ocr input rejects empty",
+  !ocrToFlashcardsInputSchema.safeParse({ imageDataUrl: "" }).success
+);
+check(
+  "ocr raw ok",
+  rawOcrFlashcardResponseSchema.safeParse({
+    extractedText: "Air mendidih pada 100 derajat.",
+    deckTitle: "Suhu",
+    cards: [{ term: "Mendidih", definition: "Air panas sampai bergelembung" }],
+  }).success
+);
+check(
+  "ocr raw rejects bad shape",
+  !rawOcrFlashcardResponseSchema.safeParse({
+    extractedText: "x",
+    deckTitle: "y",
+    cards: "nope",
+  }).success
+);
+const om = buildOcrFlashcardMessages({ imageDataUrl: PNG_DATA_URL });
+const ocrParts = om[1].content;
+check(
+  "ocr prompt embeds image part",
+  Array.isArray(ocrParts) &&
+    ocrParts.some(
+      (part) => part.type === "image_url" && part.image_url.url === PNG_DATA_URL
+    )
+);
+check(
+  "ocr prompt asks for extractedText",
+  Array.isArray(ocrParts) &&
+    ocrParts.some(
+      (part) => part.type === "text" && part.text.includes("extractedText")
+    )
+);
+check(
+  "ocr result schema requires extractedText",
+  ocrFlashcardResultSchema.safeParse({
+    deckTitle: "Suhu",
+    cards: [{ id: "c1", term: "Mendidih", definition: "Air panas" }],
+    extractedText: "Air mendidih.",
+    cached: false,
+  }).success
+);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

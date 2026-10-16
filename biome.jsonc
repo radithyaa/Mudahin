@@ -4,5 +4,17 @@
     "ultracite/biome/core",
     "ultracite/biome/react",
     "ultracite/biome/tanstack"
+  ],
+  "overrides": [
+    {
+      "includes": ["apps/frontend/src/**/*.{ts,tsx}"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noJsxPropsBind": "off"
+          }
+        }
+      }
+    }
   ]
 }

@@ -33,16 +33,16 @@
       "persistent": true
     },
     "db:generate": {
-      "cache": false,
-      "interactive": true
+      "cache": false
+    },
+    "db:migrate:deploy": {
+      "cache": false
     },
     "deploy": {
-      "cache": false,
-      "interactive": true
+      "cache": false
     },
     "destroy": {
-      "cache": false,
-      "interactive": true
+      "cache": false
     }
   },
   "globalEnv": [

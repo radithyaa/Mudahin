@@ -1,7 +1,8 @@
-import type { DeepSeekMessage } from "./ai";
+import type { ChatVisionMessage, DeepSeekMessage } from "./ai";
 import type {
   ExplainInput,
   FocusProfileId,
+  OcrToFlashcardsInput,
   QuizInput,
   SimplifyInput,
 } from "./schemas";
@@ -145,6 +146,42 @@ export function buildMindMapMessages(input: SimplifyInput): DeepSeekMessage[] {
       ]
         .filter(Boolean)
         .join("\n"),
+    },
+  ];
+}
+
+/**
+ * Prompt multimodal untuk `ocrToFlashcards` (Future F3).
+ *
+ * Model membaca tulisan tangan pada foto lalu langsung menghasilkan dek kartu
+ * belajar. `extractedText` diminta terpisah agar siswa (dan guru) bisa
+ * memeriksa hasil bacaan sebelum mempercayai kartunya.
+ */
+export function buildOcrFlashcardMessages(
+  input: OcrToFlashcardsInput
+): ChatVisionMessage[] {
+  return [
+    { role: "system", content: SYSTEM_BASE },
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: [
+            "Baca tulisan tangan pada foto catatan siswa berikut, lalu ubah menjadi kartu belajar.",
+            "Salin dahulu teks yang kamu baca pada `extractedText` (perbaiki ejaan seperlunya).",
+            "Lalu buat 4 sampai 6 kartu: satu istilah/kata kunci dan definisi singkat (maksimal 15 kata).",
+            "Jika gambar tidak memuat tulisan yang terbaca, set `extractedText` menjadi string kosong dan `cards` menjadi array kosong.",
+            input.hint ? `Konteks tambahan: ${input.hint}` : "",
+            profileHint(input.profile),
+            "Balas dengan JSON berbentuk:",
+            '{"extractedText":"teks hasil baca","deckTitle":"Judul singkat","cards":[{"term":"kata kunci","definition":"arti singkat"}]}',
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        },
+        { type: "image_url", image_url: { url: input.imageDataUrl } },
+      ],
     },
   ];
 }
